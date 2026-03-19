@@ -145,9 +145,9 @@ def generate_card_excel(
         db, card_last4, bank, year_month, card_number_raw=card_number_raw
     )
 
-    projects = [p.name for p in get_all_projects(db, active_only=True)]
-    solutions = [s.name for s in get_all_solutions(db, active_only=True)]
-    accounts = [a.name for a in get_all_account_subjects(db, active_only=True)]
+    projects = [p["name"] for p in get_all_projects(db, active_only=True)]
+    solutions = [s["name"] for s in get_all_solutions(db, active_only=True)]
+    accounts = [a["name"] for a in get_all_account_subjects(db, active_only=True)]
 
     wb = openpyxl.Workbook()
     _build_options_sheet(wb, projects, solutions, accounts)

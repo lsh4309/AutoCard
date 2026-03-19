@@ -1,7 +1,7 @@
 """마스터 데이터 CRUD 서비스"""
 from sqlalchemy.orm import Session
-from app.models import ProjectMaster, SolutionMaster, AccountSubjectMaster
 from app.services import card_master_service as card_svc
+from app import pg_master_tables as pg_masters
 
 
 # ── 카드 사용자 마스터 (PostgreSQL card_master) ─────────────────────────────────────
@@ -40,109 +40,64 @@ def delete_card_user(db: Session, card_no: str) -> bool:
     return card_svc.delete_card_user(card_no)
 
 
-# ── 프로젝트 마스터 ───────────────────────────────────────
-def get_all_projects(db: Session, active_only: bool = False) -> list[ProjectMaster]:
-    q = db.query(ProjectMaster)
-    if active_only:
-        q = q.filter(ProjectMaster.active_yn == True)
-    return q.order_by(ProjectMaster.sort_order, ProjectMaster.name).all()
+# ── 프로젝트 마스터 (PostgreSQL project_master) ───────────────────────────────────────
+def get_all_projects(db: Session = None, active_only: bool = False) -> list[dict]:
+    return pg_masters.get_all_projects(active_only=active_only)
 
 
-def create_project(db: Session, data: dict) -> ProjectMaster:
-    obj = ProjectMaster(**data)
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
-    return obj
+def create_project(db: Session, data: dict) -> dict:
+    return pg_masters.create_project(
+        name=data["name"],
+        active_yn=data.get("active_yn", True),
+        sort_order=data.get("sort_order", 0),
+    )
 
 
-def update_project(db: Session, project_id: int, data: dict) -> ProjectMaster | None:
-    obj = db.query(ProjectMaster).filter(ProjectMaster.id == project_id).first()
-    if not obj:
-        return None
-    for k, v in data.items():
-        setattr(obj, k, v)
-    db.commit()
-    db.refresh(obj)
-    return obj
+def update_project(db: Session, project_id: int | str, data: dict) -> dict | None:
+    return pg_masters.update_project(str(project_id), data)
 
 
-def delete_project(db: Session, project_id: int) -> bool:
-    obj = db.query(ProjectMaster).filter(ProjectMaster.id == project_id).first()
-    if not obj:
-        return False
-    db.delete(obj)
-    db.commit()
-    return True
+def delete_project(db: Session, project_id: int | str) -> bool:
+    return pg_masters.delete_project(str(project_id))
 
 
-# ── 솔루션 마스터 ─────────────────────────────────────────
-def get_all_solutions(db: Session, active_only: bool = False) -> list[SolutionMaster]:
-    q = db.query(SolutionMaster)
-    if active_only:
-        q = q.filter(SolutionMaster.active_yn == True)
-    return q.order_by(SolutionMaster.sort_order, SolutionMaster.name).all()
+# ── 솔루션 마스터 (PostgreSQL solution_master) ─────────────────────────────────────────
+def get_all_solutions(db: Session = None, active_only: bool = False) -> list[dict]:
+    return pg_masters.get_all_solutions(active_only=active_only)
 
 
-def create_solution(db: Session, data: dict) -> SolutionMaster:
-    obj = SolutionMaster(**data)
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
-    return obj
+def create_solution(db: Session, data: dict) -> dict:
+    return pg_masters.create_solution(
+        name=data["name"],
+        active_yn=data.get("active_yn", True),
+        sort_order=data.get("sort_order", 0),
+    )
 
 
-def update_solution(db: Session, sol_id: int, data: dict) -> SolutionMaster | None:
-    obj = db.query(SolutionMaster).filter(SolutionMaster.id == sol_id).first()
-    if not obj:
-        return None
-    for k, v in data.items():
-        setattr(obj, k, v)
-    db.commit()
-    db.refresh(obj)
-    return obj
+def update_solution(db: Session, sol_id: int, data: dict) -> dict | None:
+    return pg_masters.update_solution(sol_id, data)
 
 
 def delete_solution(db: Session, sol_id: int) -> bool:
-    obj = db.query(SolutionMaster).filter(SolutionMaster.id == sol_id).first()
-    if not obj:
-        return False
-    db.delete(obj)
-    db.commit()
-    return True
+    return pg_masters.delete_solution(sol_id)
 
 
-# ── 계정과목 마스터 ───────────────────────────────────────
-def get_all_account_subjects(db: Session, active_only: bool = False) -> list[AccountSubjectMaster]:
-    q = db.query(AccountSubjectMaster)
-    if active_only:
-        q = q.filter(AccountSubjectMaster.active_yn == True)
-    return q.order_by(AccountSubjectMaster.sort_order, AccountSubjectMaster.name).all()
+# ── 계정과목 마스터 (PostgreSQL account_subject_master) ───────────────────────────────
+def get_all_account_subjects(db: Session = None, active_only: bool = False) -> list[dict]:
+    return pg_masters.get_all_account_subjects(active_only=active_only)
 
 
-def create_account_subject(db: Session, data: dict) -> AccountSubjectMaster:
-    obj = AccountSubjectMaster(**data)
-    db.add(obj)
-    db.commit()
-    db.refresh(obj)
-    return obj
+def create_account_subject(db: Session, data: dict) -> dict:
+    return pg_masters.create_account_subject(
+        name=data["name"],
+        active_yn=data.get("active_yn", True),
+        sort_order=data.get("sort_order", 0),
+    )
 
 
-def update_account_subject(db: Session, subj_id: int, data: dict) -> AccountSubjectMaster | None:
-    obj = db.query(AccountSubjectMaster).filter(AccountSubjectMaster.id == subj_id).first()
-    if not obj:
-        return None
-    for k, v in data.items():
-        setattr(obj, k, v)
-    db.commit()
-    db.refresh(obj)
-    return obj
+def update_account_subject(db: Session, subj_id: int | str, data: dict) -> dict | None:
+    return pg_masters.update_account_subject(str(subj_id), data)
 
 
-def delete_account_subject(db: Session, subj_id: int) -> bool:
-    obj = db.query(AccountSubjectMaster).filter(AccountSubjectMaster.id == subj_id).first()
-    if not obj:
-        return False
-    db.delete(obj)
-    db.commit()
-    return True
+def delete_account_subject(db: Session, subj_id: int | str) -> bool:
+    return pg_masters.delete_account_subject(str(subj_id))

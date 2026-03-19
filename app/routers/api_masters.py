@@ -73,6 +73,18 @@ def _cu_dict(u):
     }
 
 
+def _to_project(p):
+    return {"id": p.get("id"), "name": p.get("name"), "active_yn": p.get("active_yn", True), "sort_order": p.get("sort_order", 0)}
+
+
+def _to_solution(s):
+    return {"id": s.get("id"), "name": s.get("name"), "active_yn": s.get("active_yn", True), "sort_order": s.get("sort_order", 0)}
+
+
+def _to_account(a):
+    return {"id": a.get("id"), "name": a.get("name"), "active_yn": a.get("active_yn", True), "sort_order": a.get("sort_order", 0)}
+
+
 # ── 프로젝트 ──────────────────────────────────────────────
 class ProjectIn(BaseModel):
     name: str
@@ -82,27 +94,26 @@ class ProjectIn(BaseModel):
 
 @router.get("/projects")
 def list_projects(db: Session = Depends(get_db)):
-    return [{"id": p.id, "name": p.name, "active_yn": p.active_yn, "sort_order": p.sort_order}
-            for p in svc.get_all_projects(db)]
+    return [_to_project(p) for p in svc.get_all_projects(db)]
 
 
 @router.post("/projects")
 def create_project(body: ProjectIn, db: Session = Depends(get_db)):
     obj = svc.create_project(db, body.model_dump())
-    return {"id": obj.id, "name": obj.name, "active_yn": obj.active_yn, "sort_order": obj.sort_order}
+    return _to_project(obj)
 
 
-@router.put("/projects/{pid}")
-def update_project(pid: int, body: ProjectIn, db: Session = Depends(get_db)):
-    obj = svc.update_project(db, pid, body.model_dump())
+@router.put("/projects/{name:path}")
+def update_project(name: str, body: ProjectIn, db: Session = Depends(get_db)):
+    obj = svc.update_project(db, name, body.model_dump())
     if not obj:
         raise HTTPException(status_code=404, detail="프로젝트 없음")
-    return {"id": obj.id, "name": obj.name, "active_yn": obj.active_yn, "sort_order": obj.sort_order}
+    return _to_project(obj)
 
 
-@router.delete("/projects/{pid}")
-def delete_project(pid: int, db: Session = Depends(get_db)):
-    if not svc.delete_project(db, pid):
+@router.delete("/projects/{name:path}")
+def delete_project(name: str, db: Session = Depends(get_db)):
+    if not svc.delete_project(db, name):
         raise HTTPException(status_code=404, detail="프로젝트 없음")
     return {"status": "deleted"}
 
@@ -116,14 +127,13 @@ class SolutionIn(BaseModel):
 
 @router.get("/solutions")
 def list_solutions(db: Session = Depends(get_db)):
-    return [{"id": s.id, "name": s.name, "active_yn": s.active_yn, "sort_order": s.sort_order}
-            for s in svc.get_all_solutions(db)]
+    return [_to_solution(s) for s in svc.get_all_solutions(db)]
 
 
 @router.post("/solutions")
 def create_solution(body: SolutionIn, db: Session = Depends(get_db)):
     obj = svc.create_solution(db, body.model_dump())
-    return {"id": obj.id, "name": obj.name, "active_yn": obj.active_yn, "sort_order": obj.sort_order}
+    return _to_solution(obj)
 
 
 @router.put("/solutions/{sid}")
@@ -131,7 +141,7 @@ def update_solution(sid: int, body: SolutionIn, db: Session = Depends(get_db)):
     obj = svc.update_solution(db, sid, body.model_dump())
     if not obj:
         raise HTTPException(status_code=404, detail="솔루션 없음")
-    return {"id": obj.id, "name": obj.name, "active_yn": obj.active_yn, "sort_order": obj.sort_order}
+    return _to_solution(obj)
 
 
 @router.delete("/solutions/{sid}")
@@ -150,26 +160,25 @@ class AccountIn(BaseModel):
 
 @router.get("/accounts")
 def list_accounts(db: Session = Depends(get_db)):
-    return [{"id": a.id, "name": a.name, "active_yn": a.active_yn, "sort_order": a.sort_order}
-            for a in svc.get_all_account_subjects(db)]
+    return [_to_account(a) for a in svc.get_all_account_subjects(db)]
 
 
 @router.post("/accounts")
 def create_account(body: AccountIn, db: Session = Depends(get_db)):
     obj = svc.create_account_subject(db, body.model_dump())
-    return {"id": obj.id, "name": obj.name, "active_yn": obj.active_yn, "sort_order": obj.sort_order}
+    return _to_account(obj)
 
 
-@router.put("/accounts/{aid}")
-def update_account(aid: int, body: AccountIn, db: Session = Depends(get_db)):
-    obj = svc.update_account_subject(db, aid, body.model_dump())
+@router.put("/accounts/{name:path}")
+def update_account(name: str, body: AccountIn, db: Session = Depends(get_db)):
+    obj = svc.update_account_subject(db, name, body.model_dump())
     if not obj:
         raise HTTPException(status_code=404, detail="계정과목 없음")
-    return {"id": obj.id, "name": obj.name, "active_yn": obj.active_yn, "sort_order": obj.sort_order}
+    return _to_account(obj)
 
 
-@router.delete("/accounts/{aid}")
-def delete_account(aid: int, db: Session = Depends(get_db)):
-    if not svc.delete_account_subject(db, aid):
+@router.delete("/accounts/{name:path}")
+def delete_account(name: str, db: Session = Depends(get_db)):
+    if not svc.delete_account_subject(db, name):
         raise HTTPException(status_code=404, detail="계정과목 없음")
     return {"status": "deleted"}

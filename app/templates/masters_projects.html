@@ -61,8 +61,8 @@
               <button
                 type="button"
                 class="js-edit text-blue-600 hover:text-blue-800 mr-3"
-                data-id="{{ p.id }}"
-                data-name="{{ p.name | e }}"
+        data-id="{{ p.name | e }}"
+        data-name="{{ p.name | e }}"
                 data-order="{{ p.sort_order }}"
                 data-active="{{ 'true' if p.active_yn else 'false' }}"
                 title="수정"
@@ -73,7 +73,7 @@
               <button
                 type="button"
                 class="js-delete text-red-500 hover:text-red-700"
-                data-id="{{ p.id }}"
+                data-id="{{ p.name | e }}"
                 title="삭제"
               >
                 <i class="fa-solid fa-trash"></i>
@@ -195,7 +195,7 @@
       return;
     }
 
-    const url = id ? `${API}/${id}` : API;
+    const url = id ? `${API}/${encodeURIComponent(id)}` : API;
     const method = id ? 'PUT' : 'POST';
 
     try {
@@ -231,7 +231,7 @@
     if (!confirm('삭제하시겠습니까?')) return;
 
     try {
-      const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+      const res = await fetch(`${API}/${encodeURIComponent(id)}`, { method: 'DELETE' });
 
       if (res.ok) {
         showToast('삭제 완료', 'success');

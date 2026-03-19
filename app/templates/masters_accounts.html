@@ -30,9 +30,9 @@
             {% else %}<span class="badge-error">비활성</span>{% endif %}
           </td>
           <td class="px-4 py-3 text-center">
-            <button onclick="editItem({{ a.id }}, '{{ a.name }}', {{ a.sort_order }}, {{ 'true' if a.active_yn else 'false' }})"
+            <button onclick="editItem({{ a.name | tojson }}, {{ a.name | tojson }}, {{ a.sort_order }}, {{ 'true' if a.active_yn else 'false' }})"
               class="text-blue-600 hover:text-blue-800 mr-3"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button onclick="deleteItem({{ a.id }})" class="text-red-500 hover:text-red-700">
+            <button onclick="deleteItem({{ a.name | tojson }})" class="text-red-500 hover:text-red-700">
               <i class="fa-solid fa-trash"></i></button>
           </td>
         </tr>
@@ -98,7 +98,7 @@ async function submitItem() {
     active_yn: document.getElementById('f-active').checked,
   };
   if (!body.name) { showToast('계정과목명을 입력하세요', 'warning'); return; }
-  const url = id ? `${API}/${id}` : API;
+  const url = id ? `${API}/${encodeURIComponent(id)}` : API;
   const method = id ? 'PUT' : 'POST';
   const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
   if (res.ok) { showToast('저장 완료', 'success'); setTimeout(() => location.reload(), 600); }
@@ -106,7 +106,7 @@ async function submitItem() {
 }
 async function deleteItem(id) {
   if (!confirm('삭제하시겠습니까?')) return;
-  const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${API}/${encodeURIComponent(id)}`, { method: 'DELETE' });
   if (res.ok) { showToast('삭제 완료', 'success'); setTimeout(() => location.reload(), 600); }
 }
 </script>
