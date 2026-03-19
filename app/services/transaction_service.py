@@ -4,6 +4,7 @@ import uuid
 import logging
 from pathlib import Path
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from app.models import Transaction
 from app.services.master_service import get_all_card_users
 from app.parsers.common import is_full_card_number, normalize_card_number
@@ -51,9 +52,12 @@ def upload_and_save(db: Session, file_path: Path, bank_type: str) -> dict:
     records = result["records"]
     errors = result["errors"]
     saved = 0
+    skipped = 0  # 중복으로 스킵된 건수
     full_lookup, last4_lookup = _build_card_lookups(db)
+    cols = {c.name for c in Transaction.__table__.columns}
 
     for rec in records:
+        savepoint = db.begin_nested()
         try:
             # 카드 사용자 매핑 (룩업 1회 로드로 N+1 방지)
             card_raw = rec.get("card_number_raw")
@@ -67,15 +71,30 @@ def upload_and_save(db: Session, file_path: Path, bank_type: str) -> dict:
                 user = last4_lookup.get((card_last4, bank_type))
             if user:
                 rec["card_owner_name"] = user["user_name"]
-                rec["card_owner_email"] = user.get("user_email")
                 rec["mapping_status"] = "mapped"
             else:
                 rec["mapping_status"] = "unmapped"
 
-            tx = Transaction(**rec)
+            tx = Transaction(**{k: v for k, v in rec.items() if k in cols})
             db.add(tx)
+            db.flush()
+            savepoint.commit()
             saved += 1
+        except IntegrityError as ie:
+            savepoint.rollback()
+            err_str = str(ie)
+            is_dup = (
+                "unique_transaction_idx" in err_str
+                or "23505" in err_str
+                or (ie.orig and getattr(ie.orig, "pgcode", None) == "23505")
+            )
+            if is_dup:
+                skipped += 1
+            else:
+                logger.error(f"거래 저장 실패: {ie} / 데이터: {rec}")
+                errors.append({"row": rec.get("source_row_no", 0), "message": "데이터 저장 중 제약 위반이 발생했습니다."})
         except Exception as e:
+            savepoint.rollback()
             logger.error(f"거래 저장 실패: {e} / 데이터: {rec}")
             errors.append({"row": rec.get("source_row_no", 0), "message": str(e)})
 
@@ -83,6 +102,7 @@ def upload_and_save(db: Session, file_path: Path, bank_type: str) -> dict:
     return {
         "batch_id": batch_id,
         "success": saved,
+        "skipped": skipped,
         "total": result["total"],
         "errors": errors,
     }
@@ -151,7 +171,6 @@ def remap_transactions(db: Session) -> int:
             user = last4_lookup.get((tx.card_last4, tx.source_bank))
         if user:
             tx.card_owner_name = user["user_name"]
-            tx.card_owner_email = user.get("user_email")
             tx.mapping_status = "mapped"
             updated += 1
     db.commit()

@@ -1,7 +1,16 @@
 """마스터 데이터 CRUD 서비스"""
 from sqlalchemy.orm import Session
+
 from app.services import card_master_service as card_svc
-from app import pg_master_tables as pg_masters
+from app.database.repositories import (
+    ProjectRepository,
+    SolutionRepository,
+    AccountSubjectRepository,
+)
+
+_project_repo = ProjectRepository()
+_solution_repo = SolutionRepository()
+_account_repo = AccountSubjectRepository()
 
 
 # ── 카드 사용자 마스터 (PostgreSQL card_master) ─────────────────────────────────────
@@ -42,62 +51,71 @@ def delete_card_user(db: Session, card_no: str) -> bool:
 
 # ── 프로젝트 마스터 (PostgreSQL project_master) ───────────────────────────────────────
 def get_all_projects(db: Session = None, active_only: bool = False) -> list[dict]:
-    return pg_masters.get_all_projects(active_only=active_only)
+    return _project_repo.get_all(active_only=active_only)
 
 
 def create_project(db: Session, data: dict) -> dict:
-    return pg_masters.create_project(
+    row = _project_repo.create(
         name=data["name"],
         active_yn=data.get("active_yn", True),
         sort_order=data.get("sort_order", 0),
     )
+    if not row:
+        raise RuntimeError("프로젝트 등록 실패")
+    return row
 
 
 def update_project(db: Session, project_id: int | str, data: dict) -> dict | None:
-    return pg_masters.update_project(str(project_id), data)
+    return _project_repo.update(str(project_id), data)
 
 
 def delete_project(db: Session, project_id: int | str) -> bool:
-    return pg_masters.delete_project(str(project_id))
+    return _project_repo.delete(str(project_id))
 
 
 # ── 솔루션 마스터 (PostgreSQL solution_master) ─────────────────────────────────────────
 def get_all_solutions(db: Session = None, active_only: bool = False) -> list[dict]:
-    return pg_masters.get_all_solutions(active_only=active_only)
+    return _solution_repo.get_all(active_only=active_only)
 
 
 def create_solution(db: Session, data: dict) -> dict:
-    return pg_masters.create_solution(
+    row = _solution_repo.create(
         name=data["name"],
         active_yn=data.get("active_yn", True),
         sort_order=data.get("sort_order", 0),
     )
+    if not row:
+        raise RuntimeError("솔루션 등록 실패")
+    return row
 
 
 def update_solution(db: Session, sol_id: int, data: dict) -> dict | None:
-    return pg_masters.update_solution(sol_id, data)
+    return _solution_repo.update(sol_id, data)
 
 
 def delete_solution(db: Session, sol_id: int) -> bool:
-    return pg_masters.delete_solution(sol_id)
+    return _solution_repo.delete(sol_id)
 
 
 # ── 계정과목 마스터 (PostgreSQL account_subject_master) ───────────────────────────────
 def get_all_account_subjects(db: Session = None, active_only: bool = False) -> list[dict]:
-    return pg_masters.get_all_account_subjects(active_only=active_only)
+    return _account_repo.get_all(active_only=active_only)
 
 
 def create_account_subject(db: Session, data: dict) -> dict:
-    return pg_masters.create_account_subject(
+    row = _account_repo.create(
         name=data["name"],
         active_yn=data.get("active_yn", True),
         sort_order=data.get("sort_order", 0),
     )
+    if not row:
+        raise RuntimeError("계정과목 등록 실패")
+    return row
 
 
 def update_account_subject(db: Session, subj_id: int | str, data: dict) -> dict | None:
-    return pg_masters.update_account_subject(str(subj_id), data)
+    return _account_repo.update(str(subj_id), data)
 
 
 def delete_account_subject(db: Session, subj_id: int | str) -> bool:
-    return pg_masters.delete_account_subject(str(subj_id))
+    return _account_repo.delete(str(subj_id))

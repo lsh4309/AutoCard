@@ -72,6 +72,4 @@ def _tx_to_dict(tx) -> dict:
         "purchase_detail": tx.purchase_detail,
         "remarks": tx.remarks,
         "mapping_status": tx.mapping_status,
-        "validation_status": tx.validation_status,
-        "validation_message": tx.validation_message,
     }

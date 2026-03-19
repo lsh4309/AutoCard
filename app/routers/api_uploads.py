@@ -12,6 +12,14 @@ from app.config import UPLOAD_DIR
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
 
+def _friendly_error_message(filename: str, e: Exception) -> str:
+    """UniqueViolation 등 DB 제약 위반 시 사용자 친화적 메시지"""
+    err_str = str(e)
+    if "UniqueViolation" in type(e).__name__ or "unique_transaction_idx" in err_str or "23505" in err_str:
+        return f"{filename}: 이미 등록된 거래내역이 포함되어 있습니다. (중복 데이터)"
+    return f"{filename}: 처리 중 오류가 발생했습니다."
+
+
 @router.post("")
 async def upload_files(
     files: list[UploadFile] = File(...),
@@ -22,8 +30,9 @@ async def upload_files(
 
     results = []
     total_success = 0
-    total_errors = []
+    total_skipped = 0
     total_rows = 0
+    total_errors = []
 
     for file in files:
         suffix = Path(file.filename).suffix.lower()
@@ -41,17 +50,18 @@ async def upload_files(
             bank_type = detect_bank_type_from_file(save_path)
             result = upload_and_save(db, save_path, bank_type)
             total_success += result.get("success", 0)
+            total_skipped += result.get("skipped", 0)
             total_rows += result.get("total", 0)
             for err in result.get("errors", []):
-                err["message"] = f"[{file.filename}] {err.get('message', '')}"
-                total_errors.append(err)
+                total_errors.append({"row": err.get("row"), "message": f"[{file.filename}] {err.get('message', '')}"})
             results.append({
                 "original_filename": file.filename,
                 "bank_type": bank_type,
                 **result,
             })
         except Exception as e:
-            total_errors.append({"row": 0, "message": f"{file.filename}: {str(e)}"})
+            db.rollback()
+            total_errors.append({"row": 0, "message": _friendly_error_message(file.filename, e)})
         finally:
             if save_path.exists():
                 save_path.unlink(missing_ok=True)
@@ -59,6 +69,7 @@ async def upload_files(
     return {
         "status": "ok",
         "success": total_success,
+        "skipped": total_skipped,
         "total": total_rows,
         "errors": total_errors,
         "files": results,

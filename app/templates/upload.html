@@ -115,38 +115,59 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     const content = document.getElementById('result-content');
     panel.classList.remove('hidden');
 
-    const errHtml = (data.errors || []).slice(0, 10).map(e =>
-      `<div class="text-xs text-red-600 bg-red-50 px-3 py-1 rounded">${e.row ? '행 ' + e.row + ': ' : ''}${e.message || ''}</div>`
-    ).join('');
+    const success = data.success || 0;
+    const skipped = data.skipped || 0;
+    const total = data.total || 0;
+    const hasErrors = (data.errors || []).length > 0;
 
     const filesHtml = (data.files || []).length > 0
       ? '<div class="text-xs text-gray-600 mb-4 space-y-1">' +
-        (data.files || []).map(f => `<div><span class="font-medium">${f.original_filename}</span> → ${f.bank_type} (${f.success || 0}건 저장)</div>`).join('') +
+        (data.files || []).map(f => {
+          const s = f.success || 0;
+          const sk = f.skipped || 0;
+          let line = `<span class="font-medium">${f.original_filename}</span> → ${f.bank_type}: ${s}건 저장`;
+          if (sk > 0) line += `, ${sk}건 중복 스킵`;
+          return `<div>${line}</div>`;
+        }).join('') +
         '</div>'
       : '';
+
+    let summaryHtml = '';
+    if (skipped > 0 && success === 0 && !hasErrors) {
+      summaryHtml = '<div class="text-amber-700 bg-amber-50 rounded-lg p-4 mb-4 text-sm">이미 등록된 거래내역이 포함되어 있습니다. 중복된 건은 건너뛰었습니다.</div>';
+    } else if (hasErrors) {
+      summaryHtml = '<div class="text-amber-700 bg-amber-50 rounded-lg p-4 mb-4 text-sm">일부 파일 처리 중 오류가 발생했습니다. 파일 형식과 데이터를 확인해주세요.</div>';
+    }
 
     content.innerHTML = `
       <div class="grid grid-cols-3 gap-4 mb-4">
         <div class="bg-green-50 rounded-lg p-4 text-center">
-          <div class="text-2xl font-bold text-green-700">${data.success}</div>
+          <div class="text-2xl font-bold text-green-700">${success}</div>
           <div class="text-xs text-green-600 mt-1">저장 성공</div>
         </div>
-        <div class="bg-red-50 rounded-lg p-4 text-center">
-          <div class="text-2xl font-bold text-red-700">${(data.errors||[]).length}</div>
-          <div class="text-xs text-red-600 mt-1">오류</div>
+        <div class="bg-amber-50 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-amber-700">${skipped}</div>
+          <div class="text-xs text-amber-600 mt-1">중복 스킵</div>
         </div>
         <div class="bg-blue-50 rounded-lg p-4 text-center">
-          <div class="text-2xl font-bold text-blue-700">${data.total}</div>
+          <div class="text-2xl font-bold text-blue-700">${total}</div>
           <div class="text-xs text-blue-600 mt-1">전체 행</div>
         </div>
       </div>
+      ${summaryHtml}
       ${filesHtml}
-      ${errHtml ? `<div class="space-y-1 mb-4">${errHtml}</div>` : ''}
       <a href="/transactions" class="btn-primary inline-flex items-center gap-2">
         <i class="fa-solid fa-table-list"></i> 거래내역 확인하기
       </a>
     `;
-    showToast(`${data.success}건 저장 완료`, 'success');
+
+    if (success > 0) {
+      showToast(`${success}건 저장 완료` + (skipped > 0 ? `, ${skipped}건 중복 스킵` : ''), 'success');
+    } else if (skipped > 0) {
+      showToast('이미 등록된 거래내역이 포함되어 있습니다. 중복된 건은 건너뛰었습니다.', 'warning');
+    } else if (hasErrors) {
+      showToast('처리 중 오류가 발생했습니다.', 'error');
+    }
   } catch (err) {
     showToast('네트워크 오류: ' + err.message, 'error');
   } finally {
