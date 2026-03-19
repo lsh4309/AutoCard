@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}계정과목 마스터 - Card Auto{% endblock %}
+{% block page_title %}<i class="fa-solid fa-receipt mr-2 text-blue-600"></i>계정과목/지출내역 마스터{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl">
+  <div class="flex items-center justify-between mb-3">
+    <span class="text-sm text-gray-600">총 <strong>{{ accounts|length }}</strong>개</span>
+    <button onclick="openModal()" class="btn-primary text-xs">
+      <i class="fa-solid fa-plus mr-1"></i>신규 등록
+    </button>
+  </div>
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th class="px-4 py-3 text-left text-gray-600">계정과목/지출내역</th>
+          <th class="px-4 py-3 text-center text-gray-600">순서</th>
+          <th class="px-4 py-3 text-center text-gray-600">활성</th>
+          <th class="px-4 py-3 text-center text-gray-600">관리</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for a in accounts %}
+        <tr class="border-t border-gray-100 hover:bg-gray-50">
+          <td class="px-4 py-3 font-medium">{{ a.name }}</td>
+          <td class="px-4 py-3 text-center text-gray-500">{{ a.sort_order }}</td>
+          <td class="px-4 py-3 text-center">
+            {% if a.active_yn %}<span class="badge-ok">활성</span>
+            {% else %}<span class="badge-error">비활성</span>{% endif %}
+          </td>
+          <td class="px-4 py-3 text-center">
+            <button onclick="editItem({{ a.id }}, '{{ a.name }}', {{ a.sort_order }}, {{ 'true' if a.active_yn else 'false' }})"
+              class="text-blue-600 hover:text-blue-800 mr-3"><i class="fa-solid fa-pen-to-square"></i></button>
+            <button onclick="deleteItem({{ a.id }})" class="text-red-500 hover:text-red-700">
+              <i class="fa-solid fa-trash"></i></button>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">등록된 계정과목이 없습니다.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="item-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm">
+    <h3 id="modal-title" class="text-base font-semibold text-gray-800 mb-4">계정과목 등록</h3>
+    <input type="hidden" id="edit-id" />
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">계정과목명 <span class="text-red-500">*</span></label>
+        <input id="f-name" type="text" class="input-field" placeholder="예: 식대, 교통비, 접대비" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">정렬 순서</label>
+        <input id="f-order" type="number" value="0" class="input-field" />
+      </div>
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input id="f-active" type="checkbox" checked class="rounded" />
+        <span class="text-xs text-gray-700">활성 상태</span>
+      </label>
+    </div>
+    <div class="flex gap-3 mt-4">
+      <button onclick="submitItem()" class="btn-primary flex-1">저장</button>
+      <button onclick="closeModal()" class="btn-secondary flex-1">취소</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const API = '/api/masters/accounts';
+function openModal() {
+  document.getElementById('modal-title').textContent = '계정과목 등록';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-order').value = '0';
+  document.getElementById('f-active').checked = true;
+  document.getElementById('item-modal').classList.remove('hidden');
+}
+function editItem(id, name, order, active) {
+  document.getElementById('modal-title').textContent = '계정과목 수정';
+  document.getElementById('edit-id').value = id;
+  document.getElementById('f-name').value = name;
+  document.getElementById('f-order').value = order;
+  document.getElementById('f-active').checked = active;
+  document.getElementById('item-modal').classList.remove('hidden');
+}
+function closeModal() { document.getElementById('item-modal').classList.add('hidden'); }
+async function submitItem() {
+  const id = document.getElementById('edit-id').value;
+  const body = {
+    name: document.getElementById('f-name').value.trim(),
+    sort_order: parseInt(document.getElementById('f-order').value) || 0,
+    active_yn: document.getElementById('f-active').checked,
+  };
+  if (!body.name) { showToast('계정과목명을 입력하세요', 'warning'); return; }
+  const url = id ? `${API}/${id}` : API;
+  const method = id ? 'PUT' : 'POST';
+  const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (res.ok) { showToast('저장 완료', 'success'); setTimeout(() => location.reload(), 600); }
+  else { const e = await res.json(); showToast(e.detail || '오류', 'error'); }
+}
+async function deleteItem(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  const res = await fetch(`${API}/${id}`, { method: 'DELETE' });
+  if (res.ok) { showToast('삭제 완료', 'success'); setTimeout(() => location.reload(), 600); }
+}
+</script>
+{% endblock %}

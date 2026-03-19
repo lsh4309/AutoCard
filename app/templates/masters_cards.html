@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}카드 사용자 마스터 - Card Auto{% endblock %}
+{% block page_title %}<i class="fa-solid fa-id-card mr-2 text-blue-600"></i>카드 사용자 마스터{% endblock %}
+
+{% block content %}
+<div class="flex gap-6">
+  <!-- 목록 -->
+  <div class="flex-1">
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-sm text-gray-600">총 <strong>{{ users|length }}</strong>명</span>
+      <button onclick="openModal()" class="btn-primary text-xs">
+        <i class="fa-solid fa-plus mr-1"></i>신규 등록
+      </button>
+    </div>
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <table class="w-full text-xs">
+        <thead class="bg-gray-50 border-b border-gray-200">
+          <tr>
+            <th class="px-4 py-3 text-left text-gray-600">은행</th>
+            <th class="px-4 py-3 text-left text-gray-600">카드번호</th>
+            <th class="px-4 py-3 text-left text-gray-600">끝 4자리</th>
+            <th class="px-4 py-3 text-left text-gray-600">사용자명</th>
+            <th class="px-4 py-3 text-left text-gray-600">이메일</th>
+            <th class="px-4 py-3 text-center text-gray-600">관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr class="border-t border-gray-100 hover:bg-gray-50">
+            <td class="px-4 py-3">
+              <span class="{% if u.bank_type == 'KB' %}text-blue-700{% else %}text-orange-700{% endif %} font-semibold">
+                {{ u.bank_type }}
+              </span>
+            </td>
+            <td class="px-4 py-3 font-mono text-gray-500">{{ u.card_number_full or '-' }}</td>
+            <td class="px-4 py-3 font-mono font-bold text-gray-800">{{ u.card_last4 }}</td>
+            <td class="px-4 py-3 font-medium">{{ u.user_name }}</td>
+            <td class="px-4 py-3 text-gray-500">{{ u.user_email or '-' }}</td>
+            <td class="px-4 py-3 text-center">
+              <button onclick='editUser({{ (u.card_number_full or u.card_no) | tojson }}, {{ {"bank_type": u.bank_type, "card_last4": u.card_last4, "card_number_full": u.card_number_full or u.card_no, "user_name": u.user_name} | tojson }})' class="text-blue-600 hover:text-blue-800 mr-2">
+                <i class="fa-solid fa-pen-to-square"></i>
+              </button>
+              <button onclick="deleteUser({{ (u.card_number_full or u.card_no) | tojson }})" class="text-red-500 hover:text-red-700">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+              <i class="fa-solid fa-users-slash text-4xl mb-2 block"></i>
+              등록된 사용자가 없습니다.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 등록/수정 모달 -->
+<div id="user-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg">
+    <h3 id="modal-title" class="text-base font-semibold text-gray-800 mb-4">카드 사용자 등록</h3>
+    <input type="hidden" id="edit-card-no" value="" />
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">은행 <span class="text-red-500">*</span></label>
+        <select id="f-bank" class="select-field">
+          <option value="KB">KB국민은행</option>
+          <option value="IBK">IBK기업은행</option>
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">카드번호 끝 4자리 <span class="text-red-500">*</span></label>
+        <input id="f-last4" type="text" maxlength="4" placeholder="1234" class="input-field" />
+      </div>
+      <div class="col-span-2">
+        <label class="block text-xs text-gray-600 mb-1">전체 카드번호 (선택)</label>
+        <input id="f-fullcard" type="text" placeholder="4265-8694-3287-0830" class="input-field" />
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">사용자명 <span class="text-red-500">*</span></label>
+        <input id="f-name" type="text" placeholder="홍길동" class="input-field" />
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="submitUser()" class="btn-primary flex-1">저장</button>
+      <button onclick="closeModal()" class="btn-secondary flex-1">취소</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function openModal() {
+  document.getElementById('modal-title').textContent = '카드 사용자 등록';
+  document.getElementById('edit-card-no').value = '';
+  ['f-bank','f-last4','f-fullcard','f-name'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('user-modal').classList.remove('hidden');
+}
+
+function editUser(cardNo, u) {
+  document.getElementById('modal-title').textContent = '카드 사용자 수정';
+  document.getElementById('edit-card-no').value = cardNo;
+  document.getElementById('f-bank').value = u.bank_type || 'KB';
+  document.getElementById('f-last4').value = u.card_last4 || '';
+  document.getElementById('f-fullcard').value = u.card_number_full || '';
+  document.getElementById('f-name').value = u.user_name || '';
+  document.getElementById('user-modal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('user-modal').classList.add('hidden');
+}
+
+async function submitUser() {
+  const editCardNo = document.getElementById('edit-card-no').value;
+  const body = {
+    bank_type: document.getElementById('f-bank').value,
+    card_last4: document.getElementById('f-last4').value.trim(),
+    card_number_full: document.getElementById('f-fullcard').value.trim() || null,
+    user_name: document.getElementById('f-name').value.trim(),
+  };
+  if (!body.user_name) {
+    showToast('사용자명은 필수입니다.', 'warning');
+    return;
+  }
+  if (!editCardNo && !body.card_number_full) {
+    showToast('전체 카드번호를 입력하세요.', 'warning');
+    return;
+  }
+  const cardNo = body.card_number_full || editCardNo;
+  const url = editCardNo ? `/api/masters/cards/${encodeURIComponent(editCardNo)}` : '/api/masters/cards';
+  const method = editCardNo ? 'PUT' : 'POST';
+  try {
+    const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    if (res.ok) {
+      showToast('저장 완료', 'success');
+      setTimeout(() => location.reload(), 800);
+    } else {
+      const e = await res.json();
+      showToast(e.detail || '저장 오류', 'error');
+    }
+  } catch(e) { showToast('오류: ' + e.message, 'error'); }
+}
+
+async function deleteUser(cardNo) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  try {
+    const res = await fetch(`/api/masters/cards/${encodeURIComponent(cardNo)}`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast('삭제 완료', 'success');
+      setTimeout(() => location.reload(), 800);
+    }
+  } catch(e) { showToast('오류', 'error'); }
+}
+</script>
+{% endblock %}

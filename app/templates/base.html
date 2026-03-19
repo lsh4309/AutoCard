@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Card Auto{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body { font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; }
+  
+    .nav-link {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      line-height: 1.4;
+      transition: background-color 0.2s;
+    }
+  
+    .nav-link:hover {
+      background-color: rgb(29 78 216);
+    }
+  
+    .nav-link.active {
+      background-color: rgb(30 64 175);
+    }
+  
+    .nav-link i {
+      width: 1rem;
+      text-align: center;
+      flex-shrink: 0;
+      margin-top: 0.15rem;
+    }
+  
+    .nav-link span {
+      white-space: normal;
+      word-break: keep-all;
+      overflow-wrap: anywhere;
+    }
+  
+    .badge-ok     { background:#dcfce7; color:#166534; font-size:12px; padding:2px 8px; border-radius:9999px; font-weight:500; }
+    .badge-warn   { background:#fef3c7; color:#92400e; font-size:12px; padding:2px 8px; border-radius:9999px; font-weight:500; }
+    .badge-error  { background:#fee2e2; color:#991b1b; font-size:12px; padding:2px 8px; border-radius:9999px; font-weight:500; }
+    .badge-unmapped { background:#f3f4f6; color:#4b5563; font-size:12px; padding:2px 8px; border-radius:9999px; font-weight:500; }
+  
+    .btn-primary  { background:#2563eb; color:#fff; font-size:14px; font-weight:500; padding:8px 16px; border-radius:0.5rem; }
+    .btn-secondary{ background:#f3f4f6; color:#374151; font-size:14px; font-weight:500; padding:8px 16px; border-radius:0.5rem; }
+    .btn-danger   { background:#dc2626; color:#fff; font-size:14px; font-weight:500; padding:8px 16px; border-radius:0.5rem; }
+    .btn-success  { background:#16a34a; color:#fff; font-size:14px; font-weight:500; padding:8px 16px; border-radius:0.5rem; }
+  
+    .input-field  { display:block; width:100%; border:1px solid #d1d5db; border-radius:0.5rem; padding:8px 12px; font-size:14px; }
+    .select-field { display:block; width:100%; border:1px solid #d1d5db; border-radius:0.5rem; padding:8px 12px; font-size:14px; background:#fff; }
+  
+    table { border-collapse: collapse; }
+    th, td { white-space: nowrap; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- 사이드바 -->
+  <div class="flex">
+    <aside class="w-56 min-h-screen bg-blue-900 text-white flex flex-col fixed top-0 left-0 z-30">
+      <div class="px-5 py-5 border-b border-blue-800">
+        <div class="text-lg font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-credit-card text-blue-300"></i>
+          Card Auto
+        </div>
+        <div class="text-xs text-blue-300 mt-1">법인카드 승인내역 관리</div>
+      </div>
+
+      <nav class="flex-1 px-3 py-4 space-y-1">
+        <a href="/upload" class="nav-link {% if request.url.path == '/upload' or request.url.path == '/' %}active{% endif %}">
+          <i class="fa-solid fa-upload"></i>
+          <span>파일 업로드</span>
+        </a>
+        
+        <a href="/transactions" class="nav-link {% if '/transactions' in request.url.path %}active{% endif %}">
+          <i class="fa-solid fa-table-list"></i>
+          <span>거래내역 관리</span>
+        </a>
+        
+        <a href="/exports" class="nav-link {% if '/exports' in request.url.path %}active{% endif %}">
+          <i class="fa-solid fa-file-excel"></i>
+          <span>결과 파일 생성</span>
+        </a>
+        
+        <a href="/masters/cards" class="nav-link {% if '/masters/cards' in request.url.path %}active{% endif %}">
+          <i class="fa-solid fa-id-card"></i>
+          <span>카드 사용자</span>
+        </a>
+        
+        <a href="/masters/projects" class="nav-link {% if '/masters/projects' in request.url.path %}active{% endif %}">
+          <i class="fa-solid fa-folder"></i>
+          <span>프로젝트</span>
+        </a>
+        
+        <a href="/masters/solutions" class="nav-link {% if '/masters/solutions' in request.url.path %}active{% endif %}">
+          <i class="fa-solid fa-puzzle-piece"></i>
+          <span>솔루션</span>
+        </a>
+        
+        <a href="/masters/accounts" class="nav-link {% if '/masters/accounts' in request.url.path %}active{% endif %}">
+          <i class="fa-solid fa-receipt"></i>
+          <span>계정과목</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- 메인 컨텐츠 -->
+    <main class="ml-56 flex-1 min-h-screen">
+      <!-- 상단 헤더 -->
+      <header class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between sticky top-0 z-20">
+        <h1 class="text-base font-semibold text-gray-800">{% block page_title %}{% endblock %}</h1>
+        <div class="text-xs text-gray-400">Card Auto MVP v1.0</div>
+      </header>
+
+      <div class="p-6">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+
+  <!-- 전역 토스트 알림 -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
+
+  <script>
+    function showToast(msg, type = 'info') {
+      const colors = {
+        success: 'bg-green-600',
+        error:   'bg-red-600',
+        warning: 'bg-yellow-500',
+        info:    'bg-blue-600',
+      };
+      const el = document.createElement('div');
+      el.className = `${colors[type] || colors.info} text-white text-sm px-5 py-3 rounded-lg shadow-lg opacity-0 transition-opacity duration-300 max-w-sm`;
+      el.textContent = msg;
+      document.getElementById('toast-container').appendChild(el);
+      requestAnimationFrame(() => { el.classList.remove('opacity-0'); });
+      setTimeout(() => {
+        el.classList.add('opacity-0');
+        setTimeout(() => el.remove(), 300);
+      }, 3500);
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

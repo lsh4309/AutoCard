@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}파일 업로드 - Card Auto{% endblock %}
+{% block page_title %}<i class="fa-solid fa-upload mr-2 text-blue-600"></i>법인카드 승인내역 업로드{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+  <!-- 업로드 카드 -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-file-arrow-up text-blue-500"></i> 파일 선택 및 업로드
+    </h2>
+
+    <form id="upload-form" class="space-y-4">
+      <!-- 파일 업로드 영역 (KB/IBK 동시 선택 가능, 은행 자동 판별) -->
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">엑셀 파일 <span class="text-red-500">*</span></label>
+        <div id="drop-zone"
+          class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+          onclick="document.getElementById('file-input').click()">
+          <i class="fa-solid fa-cloud-arrow-up text-3xl text-gray-400 mb-2"></i>
+          <p class="text-sm text-gray-500">클릭하거나 파일을 여기에 끌어다 놓으세요</p>
+          <p class="text-xs text-gray-400 mt-1">.xlsx, .xls 파일 지원 · KB/IBK 여러 파일 동시 선택 가능</p>
+          <div id="file-name" class="mt-3 text-sm font-medium text-blue-700 hidden"></div>
+        </div>
+        <input type="file" id="file-input" accept=".xlsx,.xls" class="hidden" multiple />
+      </div>
+
+      <button type="submit" class="btn-primary w-full py-3 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-upload"></i> 업로드 및 처리
+      </button>
+    </form>
+  </div>
+
+  <!-- 결과 패널 (처리 후 표시) -->
+  <div id="result-panel" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+      <i class="fa-solid fa-chart-bar text-blue-500"></i> 처리 결과
+    </h2>
+    <div id="result-content"></div>
+  </div>
+
+  <!-- 안내 -->
+  <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-xs text-blue-700 space-y-1">
+    <div class="font-semibold mb-2">업로드 전 확인사항</div>
+    <div>• KB/IBK 파일을 함께 선택해 업로드하면 <strong>은행이 자동 판별</strong>됩니다</div>
+    <div>• KB: 승인일, 가맹점명 / IBK: 승인일시, 이용가맹점명 등 헤더로 구분</div>
+    <div>• 카드 사용자 매핑은 <strong>카드번호 &amp; 참고항목 구분(KB/IBK)</strong> 기준으로 처리됩니다</div>
+    <div>• 업로드 전 카드 사용자 마스터에서 카드번호·구분을 등록하면 자동 매핑됩니다</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const fileInput = document.getElementById('file-input');
+const dropZone = document.getElementById('drop-zone');
+const fileNameEl = document.getElementById('file-name');
+
+fileInput.addEventListener('change', () => {
+  const files = fileInput.files;
+  if (files.length > 0) {
+    const names = Array.from(files).map(f => f.name).join(', ');
+    fileNameEl.textContent = '선택된 파일: ' + (files.length > 1 ? `${files.length}개 - ${names}` : names);
+    fileNameEl.classList.remove('hidden');
+  }
+});
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dropZone.classList.add('border-blue-400', 'bg-blue-50');
+});
+dropZone.addEventListener('dragleave', () => {
+  dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+});
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) {
+    const dt = new DataTransfer();
+    for (let i = 0; i < files.length; i++) dt.items.add(files[i]);
+    fileInput.files = dt.files;
+    const names = Array.from(fileInput.files).map(f => f.name).join(', ');
+    fileNameEl.textContent = '선택된 파일: ' + (fileInput.files.length > 1 ? `${fileInput.files.length}개 - ${names}` : names);
+    fileNameEl.classList.remove('hidden');
+  }
+});
+
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!fileInput.files || fileInput.files.length === 0) {
+    showToast('파일을 선택해주세요.', 'warning');
+    return;
+  }
+  const formData = new FormData();
+  for (let i = 0; i < fileInput.files.length; i++) {
+    formData.append('files', fileInput.files[i]);
+  }
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 처리 중...';
+
+  try {
+    const res = await fetch('/api/uploads', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (!res.ok) {
+      showToast(data.detail || '업로드 오류', 'error');
+      return;
+    }
+
+    const panel = document.getElementById('result-panel');
+    const content = document.getElementById('result-content');
+    panel.classList.remove('hidden');
+
+    const errHtml = (data.errors || []).slice(0, 10).map(e =>
+      `<div class="text-xs text-red-600 bg-red-50 px-3 py-1 rounded">${e.row ? '행 ' + e.row + ': ' : ''}${e.message || ''}</div>`
+    ).join('');
+
+    const filesHtml = (data.files || []).length > 0
+      ? '<div class="text-xs text-gray-600 mb-4 space-y-1">' +
+        (data.files || []).map(f => `<div><span class="font-medium">${f.original_filename}</span> → ${f.bank_type} (${f.success || 0}건 저장)</div>`).join('') +
+        '</div>'
+      : '';
+
+    content.innerHTML = `
+      <div class="grid grid-cols-3 gap-4 mb-4">
+        <div class="bg-green-50 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-green-700">${data.success}</div>
+          <div class="text-xs text-green-600 mt-1">저장 성공</div>
+        </div>
+        <div class="bg-red-50 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-red-700">${(data.errors||[]).length}</div>
+          <div class="text-xs text-red-600 mt-1">오류</div>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-blue-700">${data.total}</div>
+          <div class="text-xs text-blue-600 mt-1">전체 행</div>
+        </div>
+      </div>
+      ${filesHtml}
+      ${errHtml ? `<div class="space-y-1 mb-4">${errHtml}</div>` : ''}
+      <a href="/transactions" class="btn-primary inline-flex items-center gap-2">
+        <i class="fa-solid fa-table-list"></i> 거래내역 확인하기
+      </a>
+    `;
+    showToast(`${data.success}건 저장 완료`, 'success');
+  } catch (err) {
+    showToast('네트워크 오류: ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-upload"></i> 업로드 및 처리';
+  }
+});
+</script>
+{% endblock %}

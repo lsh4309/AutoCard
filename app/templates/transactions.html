@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% block title %}거래내역 관리 - Card Auto{% endblock %}
+{% block page_title %}<i class="fa-solid fa-table-list mr-2 text-blue-600"></i>거래내역 관리{% endblock %}
+
+{% block head %}
+<style>
+  .editable-cell select, .editable-cell input {
+    font-size: 12px;
+    padding: 2px 4px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    width: 100%;
+    background: white;
+  }
+  .row-selected { background-color: #eff6ff !important; }
+  .tx-table th { position: sticky; top: 0; background: #1e3a5f; color: white; z-index: 10; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 필터 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
+  <form method="get" action="/transactions" class="flex flex-wrap gap-3 items-end">
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">은행</label>
+      <select name="bank" class="select-field w-28">
+        <option value="">전체</option>
+        <option value="KB" {% if filter_bank == 'KB' %}selected{% endif %}>KB</option>
+        <option value="IBK" {% if filter_bank == 'IBK' %}selected{% endif %}>IBK</option>
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">사용자명</label>
+      <input type="text" name="user_name" value="{{ filter_user }}" placeholder="홍길동" class="input-field w-28" />
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">카드 끝 4자리</label>
+      <input type="text" name="card_last4" value="{{ filter_last4 }}" placeholder="1234" maxlength="4" class="input-field w-28" />
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">년월 (YYYYMM)</label>
+      <input type="text" name="year_month" value="{{ filter_ym }}" placeholder="202512" maxlength="6" class="input-field w-28" />
+    </div>
+    <div>
+      <label class="block text-xs text-gray-500 mb-1">매핑상태</label>
+      <select name="mapping_status" class="select-field w-28">
+        <option value="">전체</option>
+        <option value="mapped" {% if filter_mapping == 'mapped' %}selected{% endif %}>매핑됨</option>
+        <option value="unmapped" {% if filter_mapping == 'unmapped' %}selected{% endif %}>미매핑</option>
+      </select>
+    </div>
+    <button type="submit" class="btn-primary">
+      <i class="fa-solid fa-magnifying-glass mr-1"></i>검색
+    </button>
+    <a href="/transactions" class="btn-secondary">초기화</a>
+  </form>
+</div>
+
+<!-- 액션 바 -->
+<div class="flex items-center justify-between mb-3">
+  <div class="flex items-center gap-2">
+    <span class="text-sm text-gray-600">총 <strong>{{ total }}</strong>건</span>
+    <span id="selected-count" class="text-xs text-blue-600 font-medium hidden"></span>
+  </div>
+    <div class="flex gap-2">
+      <button onclick="remapAll()" class="btn-secondary text-xs">
+        <i class="fa-solid fa-arrows-rotate mr-1"></i>사용자 재매핑
+      </button>
+      <button onclick="openBulkModal()" class="btn-secondary text-xs" id="bulk-btn" disabled>
+        <i class="fa-solid fa-pen-to-square mr-1"></i>일괄 수정
+      </button>
+      <button onclick="saveAllChanges()" class="btn-primary text-xs">
+        <i class="fa-solid fa-floppy-disk mr-1"></i>변경사항 저장
+      </button>
+      <button onclick="deleteAllTransactions()" class="btn-danger text-xs">
+        <i class="fa-solid fa-trash mr-1"></i>전체 삭제
+      </button>
+    </div>
+</div>
+
+<!-- 테이블 -->
+<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-auto" style="max-height: 70vh;">
+  <table class="tx-table w-full text-xs">
+    <thead>
+      <tr>
+        <th class="px-3 py-3 text-center w-8">
+          <input type="checkbox" id="check-all" onchange="toggleAll(this)" class="rounded" />
+        </th>
+        <th class="px-3 py-3 text-left">은행</th>
+        <th class="px-3 py-3 text-left">승인일</th>
+        <th class="px-3 py-3 text-left">승인시간</th>
+        <th class="px-3 py-3 text-left">카드번호</th>
+        <th class="px-3 py-3 text-left">사용자</th>
+        <th class="px-3 py-3 text-left">가맹점명</th>
+        <th class="px-3 py-3 text-left">업종</th>
+        <th class="px-3 py-3 text-right">승인금액</th>
+        <th class="px-3 py-3 text-left w-36">프로젝트명</th>
+        <th class="px-3 py-3 text-left w-32">솔루션</th>
+        <th class="px-3 py-3 text-left w-32">계정과목</th>
+        <th class="px-3 py-3 text-center w-16">Flex</th>
+        <th class="px-3 py-3 text-left w-28">참석자</th>
+        <th class="px-3 py-3 text-left w-28">구매내역</th>
+        <th class="px-3 py-3 text-left w-28">기타</th>
+        <th class="px-3 py-3 text-center">상태</th>
+      </tr>
+    </thead>
+    <tbody id="tx-tbody">
+      {% for tx in items %}
+      <tr class="border-t border-gray-100 hover:bg-gray-50 {% if tx.validation_status == 'error' %}bg-red-50{% elif tx.validation_status == 'warning' %}bg-yellow-50{% endif %}"
+          data-id="{{ tx.id }}">
+        <td class="px-3 py-2 text-center">
+          <input type="checkbox" class="row-check rounded" value="{{ tx.id }}" onchange="onRowCheck()" />
+        </td>
+        <td class="px-3 py-2">
+          <span class="{% if tx.source_bank == 'KB' %}text-blue-700{% else %}text-orange-700{% endif %} font-semibold">
+            {{ tx.source_bank }}
+          </span>
+        </td>
+        <td class="px-3 py-2 text-gray-600">{{ tx.approval_date or '' }}</td>
+        <td class="px-3 py-2 text-gray-600">{{ tx.approval_time or '' }}</td>
+        <td class="px-3 py-2 text-gray-500 font-mono text-xs">{{ tx.card_number_raw or '' }}</td>
+        <td class="px-3 py-2">
+          {% if tx.mapping_status == 'mapped' %}
+            <span class="font-medium text-gray-800">{{ tx.card_owner_name or '' }}</span>
+          {% else %}
+            <span class="text-red-500 text-xs">미매핑({{ tx.card_last4 }})</span>
+          {% endif %}
+        </td>
+        <td class="px-3 py-2 max-w-xs truncate" title="{{ tx.merchant_name or '' }}">{{ tx.merchant_name or '' }}</td>
+        <td class="px-3 py-2 text-gray-500">{{ tx.merchant_category or '' }}</td>
+        <td class="px-3 py-2 text-right font-medium">{{ '{:,.0f}'.format(tx.approval_amount or 0) }}</td>
+
+        <!-- 편집 가능 셀 -->
+        <td class="px-2 py-1 editable-cell">
+          <select data-field="project_name" data-id="{{ tx.id }}" onchange="markDirty(this)">
+            <option value="">-- 선택 --</option>
+            {% for p in projects %}
+            <option value="{{ p.name }}" {% if tx.project_name == p.name %}selected{% endif %}>{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td class="px-2 py-1 editable-cell">
+          <select data-field="solution_name" data-id="{{ tx.id }}" onchange="markDirty(this)">
+            <option value="">-- 선택 --</option>
+            {% for s in solutions %}
+            <option value="{{ s.name }}" {% if tx.solution_name == s.name %}selected{% endif %}>{{ s.name }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td class="px-2 py-1 editable-cell">
+          <select data-field="account_subject" data-id="{{ tx.id }}" onchange="markDirty(this)">
+            <option value="">-- 선택 --</option>
+            {% for a in accounts %}
+            <option value="{{ a.name }}" {% if tx.account_subject == a.name %}selected{% endif %}>{{ a.name }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td class="px-2 py-1 editable-cell">
+          <select data-field="flex_pre_approved" data-id="{{ tx.id }}" onchange="markDirty(this)">
+            <option value="">-</option>
+            <option value="O" {% if tx.flex_pre_approved == 'O' %}selected{% endif %}>O</option>
+            <option value="X" {% if tx.flex_pre_approved == 'X' %}selected{% endif %}>X</option>
+          </select>
+        </td>
+        <td class="px-2 py-1 editable-cell">
+          <input type="text" data-field="attendees" data-id="{{ tx.id }}"
+            value="{{ tx.attendees or '' }}" onchange="markDirty(this)" placeholder="참석자명" />
+        </td>
+        <td class="px-2 py-1 editable-cell">
+          <input type="text" data-field="purchase_detail" data-id="{{ tx.id }}"
+            value="{{ tx.purchase_detail or '' }}" onchange="markDirty(this)" placeholder="구매내역" />
+        </td>
+        <td class="px-2 py-1 editable-cell">
+          <input type="text" data-field="remarks" data-id="{{ tx.id }}"
+            value="{{ tx.remarks or '' }}" onchange="markDirty(this)" placeholder="기타" />
+        </td>
+        <td class="px-3 py-2 text-center">
+          {% if tx.validation_status == 'ok' %}
+            <span class="badge-ok">정상</span>
+          {% elif tx.validation_status == 'warning' %}
+            <span class="badge-warn" title="{{ tx.validation_message or '' }}">경고</span>
+          {% elif tx.validation_status == 'error' %}
+            <span class="badge-error" title="{{ tx.validation_message or '' }}">오류</span>
+          {% else %}
+            <span class="badge-unmapped">대기</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="17" class="px-6 py-12 text-center text-gray-400">
+          <i class="fa-solid fa-inbox text-4xl mb-2 block"></i>
+          거래내역이 없습니다. 파일을 업로드하세요.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- 페이지네이션 -->
+{% if total_pages > 1 %}
+<div class="flex items-center justify-center gap-2 mt-4">
+  {% if page > 1 %}
+  <a href="?bank={{ filter_bank }}&user_name={{ filter_user }}&card_last4={{ filter_last4 }}&year_month={{ filter_ym }}&mapping_status={{ filter_mapping }}&page={{ page - 1 }}"
+     class="btn-secondary text-xs">← 이전</a>
+  {% endif %}
+  <span class="text-sm text-gray-600">{{ page }} / {{ total_pages }}</span>
+  {% if page < total_pages %}
+  <a href="?bank={{ filter_bank }}&user_name={{ filter_user }}&card_last4={{ filter_last4 }}&year_month={{ filter_ym }}&mapping_status={{ filter_mapping }}&page={{ page + 1 }}"
+     class="btn-secondary text-xs">다음 →</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<!-- 일괄 수정 모달 -->
+<div id="bulk-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+    <h3 class="text-base font-semibold text-gray-800 mb-4">
+      <i class="fa-solid fa-pen-to-square mr-2 text-blue-600"></i>일괄 수정
+    </h3>
+    <p class="text-xs text-gray-500 mb-4">선택된 항목에 값을 입력하면 해당 필드만 일괄 변경됩니다. 빈 값은 변경하지 않습니다.</p>
+    <div class="space-y-3">
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">프로젝트명</label>
+        <select id="bulk-project" class="select-field">
+          <option value="">-- 변경 안 함 --</option>
+          {% for p in projects %}
+          <option value="{{ p.name }}">{{ p.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">솔루션</label>
+        <select id="bulk-solution" class="select-field">
+          <option value="">-- 변경 안 함 --</option>
+          {% for s in solutions %}
+          <option value="{{ s.name }}">{{ s.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">계정과목/지출내역</label>
+        <select id="bulk-account" class="select-field">
+          <option value="">-- 변경 안 함 --</option>
+          {% for a in accounts %}
+          <option value="{{ a.name }}">{{ a.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs text-gray-600 mb-1">Flex 사전승인</label>
+        <select id="bulk-flex" class="select-field">
+          <option value="">-- 변경 안 함 --</option>
+          <option value="O">O</option>
+          <option value="X">X</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="submitBulkUpdate()" class="btn-primary flex-1">적용</button>
+      <button onclick="closeBulkModal()" class="btn-secondary flex-1">취소</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function remapAll() {
+  const res = await fetch('/api/transactions/remap', { method: 'POST' });
+  const data = await res.json();
+  showToast(`${data.remapped}건 재매핑 완료. 페이지를 새로고침합니다.`, 'success');
+  setTimeout(() => location.reload(), 1000);
+}
+
+async function deleteAllTransactions() {
+  if (!confirm('모든 거래내역을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  try {
+    const res = await fetch('/api/transactions', { method: 'DELETE' });
+    const data = await res.json();
+    if (res.ok) {
+      showToast(`${data.deleted}건 삭제 완료. 페이지를 새로고침합니다.`, 'success');
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      showToast(data.detail || '삭제 실패', 'error');
+    }
+  } catch (e) {
+    showToast('오류: ' + e.message, 'error');
+  }
+}
+
+// 더티 추적 (변경된 셀 저장)
+const dirtyMap = {}; // { txId: { field: value } }
+
+function markDirty(el) {
+  const id = el.dataset.id;
+  const field = el.dataset.field;
+  if (!dirtyMap[id]) dirtyMap[id] = {};
+  dirtyMap[id][field] = el.value;
+  el.closest('tr').classList.add('bg-blue-50');
+}
+
+async function saveAllChanges() {
+  const ids = Object.keys(dirtyMap);
+  if (ids.length === 0) {
+    showToast('변경된 항목이 없습니다.', 'info');
+    return;
+  }
+  let saved = 0, failed = 0;
+  for (const id of ids) {
+    try {
+      const res = await fetch(`/api/transactions/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dirtyMap[id]),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        updateRowStatus(id, data.item);
+        saved++;
+        delete dirtyMap[id];
+      } else {
+        failed++;
+      }
+    } catch { failed++; }
+  }
+  if (saved > 0) showToast(`${saved}건 저장 완료`, 'success');
+  if (failed > 0) showToast(`${failed}건 저장 실패`, 'error');
+}
+
+function updateRowStatus(id, item) {
+  const row = document.querySelector(`tr[data-id="${id}"]`);
+  if (!row) return;
+  row.classList.remove('bg-blue-50', 'bg-red-50', 'bg-yellow-50');
+  const statusCell = row.querySelector('td:last-child');
+  if (item.validation_status === 'ok') {
+    statusCell.innerHTML = '<span class="badge-ok">정상</span>';
+  } else if (item.validation_status === 'warning') {
+    statusCell.innerHTML = `<span class="badge-warn" title="${item.validation_message || ''}">경고</span>`;
+    row.classList.add('bg-yellow-50');
+  } else if (item.validation_status === 'error') {
+    statusCell.innerHTML = `<span class="badge-error" title="${item.validation_message || ''}">오류</span>`;
+    row.classList.add('bg-red-50');
+  }
+}
+
+// 체크박스 관련
+function toggleAll(master) {
+  document.querySelectorAll('.row-check').forEach(cb => { cb.checked = master.checked; });
+  onRowCheck();
+}
+
+function onRowCheck() {
+  const checked = [...document.querySelectorAll('.row-check:checked')];
+  const countEl = document.getElementById('selected-count');
+  const bulkBtn = document.getElementById('bulk-btn');
+  if (checked.length > 0) {
+    countEl.textContent = `${checked.length}건 선택됨`;
+    countEl.classList.remove('hidden');
+    bulkBtn.disabled = false;
+  } else {
+    countEl.classList.add('hidden');
+    bulkBtn.disabled = true;
+  }
+}
+
+function getSelectedIds() {
+  return [...document.querySelectorAll('.row-check:checked')].map(cb => parseInt(cb.value));
+}
+
+function openBulkModal() {
+  document.getElementById('bulk-modal').classList.remove('hidden');
+}
+function closeBulkModal() {
+  document.getElementById('bulk-modal').classList.add('hidden');
+}
+
+async function submitBulkUpdate() {
+  const ids = getSelectedIds();
+  if (ids.length === 0) return;
+  const data = {
+    project_name: document.getElementById('bulk-project').value || null,
+    solution_name: document.getElementById('bulk-solution').value || null,
+    account_subject: document.getElementById('bulk-account').value || null,
+    flex_pre_approved: document.getElementById('bulk-flex').value || null,
+  };
+  try {
+    const res = await fetch('/api/transactions/bulk-update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, data }),
+    });
+    const result = await res.json();
+    showToast(`${result.updated}건 일괄 수정 완료. 페이지를 새로고침합니다.`, 'success');
+    closeBulkModal();
+    setTimeout(() => location.reload(), 1200);
+  } catch (e) {
+    showToast('일괄 수정 오류: ' + e.message, 'error');
+  }
+}
+</script>
+{% endblock %}
