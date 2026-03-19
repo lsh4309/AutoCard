@@ -5,8 +5,6 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 from app.models import Transaction
 from app.services.master_service import get_card_user_by_last4, get_card_user_by_card_number
-from app.services.validation_service import validate_transaction
-
 from app.parsers.common import is_full_card_number
 from app.parsers.kb_parser import parse_kb_file
 from app.parsers.ibk_parser import parse_ibk_file
@@ -47,11 +45,6 @@ def upload_and_save(db: Session, file_path: Path, bank_type: str) -> dict:
                 rec["mapping_status"] = "unmapped"
 
             tx = Transaction(**rec)
-            # 검증
-            status, msg = validate_transaction(tx)
-            tx.validation_status = status
-            tx.validation_message = msg
-
             db.add(tx)
             saved += 1
         except Exception as e:
@@ -102,54 +95,10 @@ def get_transactions(
     return items, total
 
 
-def update_transaction(db: Session, tx_id: int, data: dict) -> Transaction | None:
-    tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
-    if not tx:
-        return None
-
-    editable_fields = [
-        "project_name", "solution_name", "account_subject",
-        "flex_pre_approved", "attendees", "purchase_detail", "remarks",
-    ]
-    for field in editable_fields:
-        if field in data:
-            setattr(tx, field, data[field])
-
-    status, msg = validate_transaction(tx)
-    tx.validation_status = status
-    tx.validation_message = msg
-    db.commit()
-    db.refresh(tx)
-    return tx
-
-
-def bulk_update_transactions(db: Session, tx_ids: list[int], data: dict) -> int:
-    """다건 일괄 수정"""
-    updated = 0
-    editable_fields = [
-        "project_name", "solution_name", "account_subject",
-        "flex_pre_approved", "attendees", "purchase_detail", "remarks",
-    ]
-    for tx_id in tx_ids:
-        tx = db.query(Transaction).filter(Transaction.id == tx_id).first()
-        if tx:
-            for field in editable_fields:
-                if field in data and data[field] is not None and data[field] != "":
-                    setattr(tx, field, data[field])
-            status, msg = validate_transaction(tx)
-            tx.validation_status = status
-            tx.validation_message = msg
-            updated += 1
-    db.commit()
-    return updated
-
-
 def remap_transactions(db: Session) -> int:
     """카드 사용자 마스터 기준으로 미매핑 거래를 재매핑"""
-    from app.models import CardUser
     unmapped = db.query(Transaction).filter(Transaction.mapping_status == "unmapped").all()
     updated = 0
-    
     for tx in unmapped:
         user = None
         if tx.card_number_raw and "*" not in str(tx.card_number_raw):
@@ -160,9 +109,6 @@ def remap_transactions(db: Session) -> int:
             tx.card_owner_name = user["user_name"]
             tx.card_owner_email = user.get("user_email")
             tx.mapping_status = "mapped"
-            status, msg = validate_transaction(tx)
-            tx.validation_status = status
-            tx.validation_message = msg
             updated += 1
     db.commit()
     return updated
@@ -195,7 +141,6 @@ def get_cards_for_export(db: Session, year_month: str | None = None) -> list[dic
             count_q = count_q.filter(Transaction.use_year_month == year_month)
 
         total = count_q.count()
-        ok = count_q.filter(Transaction.validation_status == "ok").count()
         display_name = tx.card_owner_name or (
             f"미매핑({tx.card_last4})" if tx.card_last4 else "미매핑"
         )
@@ -206,7 +151,5 @@ def get_cards_for_export(db: Session, year_month: str | None = None) -> list[dic
             "user_name": display_name,
             "year_month": tx.use_year_month,
             "total": total,
-            "ok": ok,
-            "warning": total - ok,
         }
     return list(seen.values())

@@ -77,7 +77,6 @@ CARD_AUTO/
     services/
       transaction_service.py   # 거래 저장/조회/수정
       master_service.py        # 마스터 CRUD
-      validation_service.py    # 검증 로직
       excel_export_service.py  # 엑셀 생성
     routers/
       pages.py           # 페이지 라우터
@@ -102,8 +101,8 @@ CARD_AUTO/
 |--------|-----|------|
 | POST | `/api/uploads` | 파일 업로드 및 파싱 |
 | GET | `/api/transactions` | 거래 목록 조회 |
-| PATCH | `/api/transactions/{id}` | 단건 수정 |
-| POST | `/api/transactions/bulk-update` | 다건 일괄 수정 |
+| POST | `/api/transactions/remap` | 사용자 재매핑 |
+| DELETE | `/api/transactions` | 거래내역 전체 삭제 |
 | GET/POST/PUT/DELETE | `/api/masters/cards` | 카드 사용자 CRUD |
 | GET/POST/PUT/DELETE | `/api/masters/projects` | 프로젝트 CRUD |
 | GET/POST/PUT/DELETE | `/api/masters/solutions` | 솔루션 CRUD |

@@ -54,10 +54,6 @@ async def transactions_page(
         page=page,
         page_size=page_size,
     )
-    projects = get_all_projects(db, active_only=True)
-    solutions = get_all_solutions(db, active_only=True)
-    accounts = get_all_account_subjects(db, active_only=True)
-
     total_pages = (total + page_size - 1) // page_size
 
     return templates.TemplateResponse("transactions.html", {
@@ -67,9 +63,6 @@ async def transactions_page(
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
-        "projects": projects,
-        "solutions": solutions,
-        "accounts": accounts,
         "filter_bank": bank,
         "filter_user": user_name,
         "filter_last4": card_last4,

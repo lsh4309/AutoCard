@@ -20,7 +20,7 @@ def get_all_card_users() -> list[dict[str, Any]]:
             "card_last4": _extract_last4(r["card_no"]),
             "user_name": r["user_name"],
             "bank_type": r["card_type"],
-            "user_email": f"{r['user_name']}@pinetree.com",
+            "user_email": f"{r['user_name']}@pine-partners.com",
             "active_yn": True,
             "note": None,
         }

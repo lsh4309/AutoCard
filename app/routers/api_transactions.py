@@ -1,29 +1,12 @@
 """거래 데이터 API"""
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.db import get_db
 from app.services.transaction_service import (
-    get_transactions, update_transaction, bulk_update_transactions, remap_transactions,
-    delete_all_transactions,
+    get_transactions, remap_transactions, delete_all_transactions,
 )
 
 router = APIRouter(prefix="/api/transactions", tags=["transactions"])
-
-
-class TransactionUpdate(BaseModel):
-    project_name: str | None = None
-    solution_name: str | None = None
-    account_subject: str | None = None
-    flex_pre_approved: str | None = None
-    attendees: str | None = None
-    purchase_detail: str | None = None
-    remarks: str | None = None
-
-
-class BulkUpdateRequest(BaseModel):
-    ids: list[int]
-    data: TransactionUpdate
 
 
 @router.get("")
@@ -53,24 +36,6 @@ def list_transactions(
         "page_size": page_size,
         "items": [_tx_to_dict(tx) for tx in items],
     }
-
-
-@router.patch("/{tx_id}")
-def patch_transaction(
-    tx_id: int,
-    body: TransactionUpdate,
-    db: Session = Depends(get_db),
-):
-    tx = update_transaction(db, tx_id, body.model_dump(exclude_none=False))
-    if not tx:
-        raise HTTPException(status_code=404, detail="거래 없음")
-    return {"status": "ok", "item": _tx_to_dict(tx)}
-
-
-@router.post("/bulk-update")
-def bulk_update(body: BulkUpdateRequest, db: Session = Depends(get_db)):
-    count = bulk_update_transactions(db, body.ids, body.data.model_dump(exclude_none=False))
-    return {"status": "ok", "updated": count}
 
 
 @router.post("/remap")

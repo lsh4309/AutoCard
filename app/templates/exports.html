@@ -27,8 +27,6 @@
         <th class="px-4 py-3 text-left text-gray-600">사용자명</th>
         <th class="px-4 py-3 text-center text-gray-600">년월</th>
         <th class="px-4 py-3 text-center text-gray-600">전체</th>
-        <th class="px-4 py-3 text-center text-gray-600">정상</th>
-        <th class="px-4 py-3 text-center text-gray-600">경고/오류</th>
         <th class="px-4 py-3 text-center text-gray-600">파일 생성</th>
       </tr>
     </thead>
@@ -45,16 +43,6 @@
         <td class="px-4 py-3 text-center text-gray-500">{{ card.year_month or '-' }}</td>
         <td class="px-4 py-3 text-center">{{ card.total }}</td>
         <td class="px-4 py-3 text-center">
-          <span class="badge-ok">{{ card.ok }}</span>
-        </td>
-        <td class="px-4 py-3 text-center">
-          {% if card.warning > 0 %}
-          <span class="badge-warn">{{ card.warning }}</span>
-          {% else %}
-          <span class="text-gray-400">0</span>
-          {% endif %}
-        </td>
-        <td class="px-4 py-3 text-center">
           <button
             class="btn-success text-xs btn-generate"
             data-last4="{{ card.card_last4 }}"
@@ -67,7 +55,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="8" class="px-6 py-12 text-center text-gray-400">
+        <td colspan="6" class="px-6 py-12 text-center text-gray-400">
           <i class="fa-solid fa-inbox text-4xl mb-2 block"></i>
           거래내역이 없습니다. 파일을 업로드하세요.
         </td>
