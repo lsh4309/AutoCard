@@ -20,38 +20,39 @@ class CardRepository(PgRepository):
     def get_all(self) -> list[dict[str, Any]]:
         return self.fetch_all(
             """
-            SELECT card_no, user_name, card_type, card_no_normalized, card_last4
+            SELECT card_no, user_name, card_type, card_no_normalized, card_last4, user_email
             FROM card_master
             ORDER BY card_type, card_no
             """
         )
 
     def create(
-        self, card_no: str, user_name: str, card_type: str
+        self, card_no: str, user_name: str, card_type: str, user_email: str | None = None
     ) -> dict[str, Any] | None:
         norm = _normalize(card_no)
         last4 = _last4(card_no)
         return self.fetch_one(
             """
-            INSERT INTO card_master (card_no, user_name, card_type, card_no_normalized, card_last4)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING card_no, user_name, card_type
+            INSERT INTO card_master (card_no, user_name, card_type, card_no_normalized, card_last4, user_email)
+            VALUES (%s, %s, %s, %s, %s, %s)
+            RETURNING card_no, user_name, card_type, user_email
             """,
-            (card_no, user_name, card_type, norm, last4),
+            (card_no, user_name, card_type, norm, last4, user_email),
         )
 
     def update(
-        self, card_no: str, user_name: str, card_type: str
+        self, card_no: str, user_name: str, card_type: str, user_email: str | None = None
     ) -> dict[str, Any] | None:
         return self.fetch_one(
             """
             UPDATE card_master
                SET user_name = %s,
-                   card_type = %s
+                   card_type = %s,
+                   user_email = %s
              WHERE card_no = %s
-         RETURNING card_no, user_name, card_type
+         RETURNING card_no, user_name, card_type, user_email
             """,
-            (user_name, card_type, card_no),
+            (user_name, card_type, user_email, card_no),
         )
 
     def delete(self, card_no: str) -> bool:
@@ -72,7 +73,7 @@ class CardRepository(PgRepository):
         if card_type:
             return self.fetch_one(
                 """
-                SELECT card_no, user_name, card_type
+                SELECT card_no, user_name, card_type, user_email
                 FROM card_master
                 WHERE card_no_normalized = %s AND card_type = %s
                 """,
@@ -80,7 +81,7 @@ class CardRepository(PgRepository):
             )
         return self.fetch_one(
             """
-            SELECT card_no, user_name, card_type
+            SELECT card_no, user_name, card_type, user_email
             FROM card_master
             WHERE card_no_normalized = %s
             LIMIT 1
@@ -98,7 +99,7 @@ class CardRepository(PgRepository):
         if card_type:
             return self.fetch_one(
                 """
-                SELECT card_no, user_name, card_type
+                SELECT card_no, user_name, card_type, user_email
                 FROM card_master
                 WHERE card_last4 = %s AND card_type = %s
                 LIMIT 1
@@ -107,7 +108,7 @@ class CardRepository(PgRepository):
             )
         return self.fetch_one(
             """
-            SELECT card_no, user_name, card_type
+            SELECT card_no, user_name, card_type, user_email
             FROM card_master
             WHERE card_last4 = %s
             LIMIT 1

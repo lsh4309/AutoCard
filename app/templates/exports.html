@@ -28,6 +28,8 @@
         <th class="px-4 py-3 text-center text-gray-600">년월</th>
         <th class="px-4 py-3 text-center text-gray-600">전체</th>
         <th class="px-4 py-3 text-center text-gray-600">파일 생성</th>
+        <th class="px-4 py-3 text-left text-gray-600">수신 이메일</th>
+        <th class="px-4 py-3 text-center text-gray-600">메일 발송</th>
       </tr>
     </thead>
     <tbody>
@@ -52,10 +54,32 @@
             <i class="fa-solid fa-file-excel mr-1"></i>생성
           </button>
         </td>
+        <td class="px-4 py-3 text-xs text-gray-500">
+          {% if card.user_email %}
+            <span class="text-green-700"><i class="fa-solid fa-envelope mr-1"></i>{{ card.user_email }}</span>
+          {% else %}
+            <span class="text-red-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>미등록</span>
+          {% endif %}
+        </td>
+        <td class="px-4 py-3 text-center">
+          {% if card.user_email %}
+          <button
+            class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg btn-send-one"
+            data-card-number="{{ card.card_number }}"
+            data-bank="{{ card.bank }}"
+            data-ym="{{ card.year_month or '' }}"
+            data-user="{{ card.user_name }}"
+            data-email="{{ card.user_email }}">
+            <i class="fa-solid fa-paper-plane mr-1"></i>발송
+          </button>
+          {% else %}
+          <span class="text-xs text-gray-300">-</span>
+          {% endif %}
+        </td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" class="px-6 py-12 text-center text-gray-400">
+        <td colspan="8" class="px-6 py-12 text-center text-gray-400">
           <i class="fa-solid fa-inbox text-4xl mb-2 block"></i>
           거래내역이 없습니다. 파일을 업로드하세요.
         </td>
@@ -70,8 +94,78 @@
   <button onclick="generateAll()" class="btn-primary">
     <i class="fa-solid fa-file-zipper mr-2"></i>전체 일괄 생성
   </button>
+  <button onclick="openMailDialog()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+    <i class="fa-solid fa-paper-plane"></i>전체 메일 발송
+  </button>
 </div>
 {% endif %}
+
+<!-- ══════════════ 메일 발송 다이얼로그 ══════════════ -->
+<div id="mail-dialog" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
+  <div class="bg-white rounded-xl shadow-xl p-6 w-full max-w-lg">
+
+    <!-- 인증 대기 화면 -->
+    <div id="mail-auth-panel">
+      <h3 class="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
+        <i class="fa-brands fa-microsoft text-blue-600"></i>Outlook 인증 필요
+      </h3>
+      <p class="text-xs text-gray-500 mb-4">처음 1회만 인증하면 이후 자동으로 메일이 발송됩니다.</p>
+      <button onclick="startAuth()" class="btn-primary w-full mb-3">
+        <i class="fa-solid fa-key mr-2"></i>Outlook 인증 시작
+      </button>
+      <!-- 코드 표시 영역 -->
+      <div id="auth-code-box" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+        <p class="text-xs text-blue-700 mb-2">아래 주소로 이동 후 코드를 입력하세요</p>
+        <a id="auth-url" href="#" target="_blank" class="text-blue-600 underline text-sm font-medium block mb-3">
+          https://microsoft.com/devicelogin
+        </a>
+        <div class="bg-white border border-blue-300 rounded-lg py-3 px-6 inline-block">
+          <span id="auth-code" class="text-2xl font-bold tracking-widest text-blue-800 font-mono">------</span>
+        </div>
+        <p class="text-xs text-gray-400 mt-3" id="auth-waiting-msg">
+          <i class="fa-solid fa-spinner fa-spin mr-1"></i>로그인 대기 중...
+        </p>
+      </div>
+      <div id="auth-done-box" class="hidden bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+        <i class="fa-solid fa-circle-check text-green-600 text-3xl mb-2 block"></i>
+        <p class="text-sm font-semibold text-green-700">인증 완료!</p>
+        <p class="text-xs text-gray-500 mt-1">이제 메일을 발송할 수 있습니다.</p>
+      </div>
+    </div>
+
+    <!-- 발송 확인 화면 -->
+    <div id="mail-send-panel" class="hidden">
+      <h3 class="text-base font-semibold text-gray-800 mb-1 flex items-center gap-2">
+        <i class="fa-solid fa-paper-plane text-blue-600"></i>메일 발송 확인
+      </h3>
+      <p class="text-xs text-gray-500 mb-4" id="mail-send-desc">이메일이 등록된 사용자에게 카드 사용내역 파일을 발송합니다.</p>
+      <div id="mail-preview-list" class="max-h-52 overflow-y-auto border border-gray-200 rounded-lg mb-4 divide-y divide-gray-100 text-xs">
+      </div>
+      <div class="flex gap-3">
+        <button onclick="confirmSend()" id="btn-confirm-send" class="btn-primary flex-1">
+          <i class="fa-solid fa-paper-plane mr-2"></i>발송
+        </button>
+        <button onclick="closeMailDialog()" class="btn-secondary flex-1">취소</button>
+      </div>
+    </div>
+
+    <!-- 발송 결과 화면 -->
+    <div id="mail-result-panel" class="hidden">
+      <h3 class="text-base font-semibold text-gray-800 mb-3 flex items-center gap-2">
+        <i class="fa-solid fa-envelope-circle-check text-green-600"></i>발송 결과
+      </h3>
+      <div id="mail-result-summary" class="flex gap-4 mb-4 text-sm">
+      </div>
+      <div id="mail-result-list" class="max-h-60 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100 text-xs">
+      </div>
+      <button onclick="closeMailDialog()" class="btn-secondary w-full mt-4">닫기</button>
+    </div>
+
+    <button onclick="closeMailDialog()" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-xl">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  </div>
+</div>
 
 <!-- 다운로드 링크 영역 -->
 <div id="download-list" class="mt-5 space-y-2"></div>
@@ -90,6 +184,9 @@
 <script>
 document.querySelectorAll('.btn-generate').forEach(btn => {
   btn.addEventListener('click', () => generateFile(btn));
+});
+document.querySelectorAll('.btn-send-one').forEach(btn => {
+  btn.addEventListener('click', () => openMailDialogForOne(btn));
 });
 
 async function generateFile(btn) {
@@ -138,6 +235,185 @@ function addDownloadLink(fileName) {
   `;
   container.prepend(el);
 }
+
+// ─── 메일 발송 기능 ────────────────────────────────────────────────
+
+let _pendingSendCards = null; // 발송 대상 카드 목록 (null = 전체)
+let _authPollTimer = null;
+
+function _getTableCards() {
+  const rows = document.querySelectorAll('tbody tr');
+  const items = [];
+  rows.forEach(row => {
+    const btn = row.querySelector('.btn-send-one');
+    if (btn) {
+      items.push({
+        card_number: btn.dataset.cardNumber,
+        bank: btn.dataset.bank,
+        year_month: btn.dataset.ym || null,
+        user_name: btn.dataset.user,
+        user_email: btn.dataset.email,
+      });
+    }
+  });
+  return items;
+}
+
+function _showPanel(name) {
+  ['mail-auth-panel','mail-send-panel','mail-result-panel'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+  document.getElementById(name).classList.remove('hidden');
+}
+
+async function openMailDialog() {
+  _pendingSendCards = null; // 전체 발송
+  document.getElementById('mail-dialog').classList.remove('hidden');
+  await _checkAuthAndProceed();
+}
+
+async function openMailDialogForOne(btn) {
+  _pendingSendCards = [{
+    card_number: btn.dataset.cardNumber,
+    bank: btn.dataset.bank,
+    year_month: btn.dataset.ym || null,
+    user_name: btn.dataset.user,
+    user_email: btn.dataset.email,
+  }];
+  document.getElementById('mail-dialog').classList.remove('hidden');
+  await _checkAuthAndProceed();
+}
+
+function closeMailDialog() {
+  document.getElementById('mail-dialog').classList.add('hidden');
+  if (_authPollTimer) { clearInterval(_authPollTimer); _authPollTimer = null; }
+  ['auth-code-box','auth-done-box'].forEach(id => document.getElementById(id).classList.add('hidden'));
+}
+
+async function _checkAuthAndProceed() {
+  const res = await fetch('/api/mail/auth/status');
+  const data = await res.json();
+  if (data.has_token) {
+    _showSendPanel();
+  } else {
+    _showPanel('mail-auth-panel');
+  }
+}
+
+async function startAuth() {
+  const res = await fetch('/api/mail/auth/start', { method: 'POST' });
+  const data = await res.json();
+
+  if (data.status === 'done' || data.has_token) {
+    document.getElementById('auth-done-box').classList.remove('hidden');
+    setTimeout(() => _showSendPanel(), 1200);
+    return;
+  }
+
+  if (data.user_code) {
+    document.getElementById('auth-code-box').classList.remove('hidden');
+    document.getElementById('auth-url').href = data.verification_url || 'https://microsoft.com/devicelogin';
+    document.getElementById('auth-url').textContent = data.verification_url || 'https://microsoft.com/devicelogin';
+    document.getElementById('auth-code').textContent = data.user_code;
+  }
+
+  // 인증 완료 폴링
+  _authPollTimer = setInterval(async () => {
+    const r = await fetch('/api/mail/auth/status');
+    const s = await r.json();
+    if (s.status === 'done' || s.has_token) {
+      clearInterval(_authPollTimer); _authPollTimer = null;
+      document.getElementById('auth-waiting-msg').innerHTML = '<i class="fa-solid fa-circle-check text-green-500 mr-1"></i>인증 완료!';
+      document.getElementById('auth-done-box').classList.remove('hidden');
+      document.getElementById('auth-code-box').classList.add('hidden');
+      setTimeout(() => _showSendPanel(), 1200);
+    } else if (s.status === 'error') {
+      clearInterval(_authPollTimer); _authPollTimer = null;
+      showToast('인증 실패: ' + s.message, 'error');
+    }
+  }, 2000);
+}
+
+function _showSendPanel() {
+  _showPanel('mail-send-panel');
+  const cards = _pendingSendCards || _getTableCards();
+  const desc = _pendingSendCards
+    ? `${cards[0].user_name}님(${cards[0].user_email})에게 메일을 발송합니다.`
+    : `이메일이 등록된 ${cards.length}명에게 카드 사용내역 파일을 발송합니다.`;
+  document.getElementById('mail-send-desc').textContent = desc;
+
+  const list = document.getElementById('mail-preview-list');
+  list.innerHTML = cards.map(c => `
+    <div class="px-4 py-2 flex items-center justify-between">
+      <span class="font-medium text-gray-700">${c.user_name}</span>
+      <span class="text-blue-600">${c.user_email}</span>
+    </div>
+  `).join('');
+}
+
+async function confirmSend() {
+  const btn = document.getElementById('btn-confirm-send');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>발송 중...';
+
+  const cards = _pendingSendCards || _getTableCards();
+  try {
+    const res = await fetch('/api/mail/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      showToast(data.detail || '발송 오류', 'error');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>발송';
+      return;
+    }
+    _showResultPanel(data);
+  } catch (e) {
+    showToast('오류: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i>발송';
+  }
+}
+
+function _showResultPanel(data) {
+  _showPanel('mail-result-panel');
+
+  document.getElementById('mail-result-summary').innerHTML = `
+    <div class="flex-1 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+      <div class="text-2xl font-bold text-green-700">${data.sent}</div>
+      <div class="text-xs text-green-600">발송 성공</div>
+    </div>
+    <div class="flex-1 bg-red-50 border border-red-200 rounded-lg p-3 text-center">
+      <div class="text-2xl font-bold text-red-700">${data.failed}</div>
+      <div class="text-xs text-red-600">발송 실패</div>
+    </div>
+    <div class="flex-1 bg-gray-50 border border-gray-200 rounded-lg p-3 text-center">
+      <div class="text-2xl font-bold text-gray-600">${data.skipped}</div>
+      <div class="text-xs text-gray-500">건너뜀</div>
+    </div>
+  `;
+
+  const list = document.getElementById('mail-result-list');
+  list.innerHTML = data.details.map(d => {
+    const icon = d.status === 'sent'
+      ? '<i class="fa-solid fa-circle-check text-green-500 mr-1"></i>'
+      : d.status === 'failed'
+      ? '<i class="fa-solid fa-circle-xmark text-red-500 mr-1"></i>'
+      : '<i class="fa-solid fa-circle-minus text-gray-400 mr-1"></i>';
+    const detail = d.status === 'sent' ? d.to : (d.error || '-');
+    return `
+      <div class="px-4 py-2 flex items-start justify-between gap-2">
+        <span class="font-medium text-gray-700 shrink-0">${icon}${d.user_name}</span>
+        <span class="text-gray-400 truncate text-right">${detail}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+// ─── 기존 기능 ──────────────────────────────────────────────────
 
 async function generateAll() {
   const rows = document.querySelectorAll('tbody tr');

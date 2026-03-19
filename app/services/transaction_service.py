@@ -190,11 +190,13 @@ def get_cards_for_export(db: Session, year_month: str | None = None) -> list[dic
     counts: dict[tuple[str, str], int] = defaultdict(int)
     for tx in q.all():
         card_number = ""
+        matched_user: dict | None = None
         if tx.card_number_raw and is_full_card_number(tx.card_number_raw):
             card_number = tx.card_number_raw
+            matched_user = full_lookup.get((normalize_card_number(tx.card_number_raw), tx.source_bank))
         elif tx.card_last4:
-            user = last4_lookup.get((tx.card_last4, tx.source_bank))
-            card_number = user["card_no"] if user else tx.card_last4
+            matched_user = last4_lookup.get((tx.card_last4, tx.source_bank))
+            card_number = matched_user["card_no"] if matched_user else tx.card_last4
 
         if not card_number:
             continue
@@ -205,10 +207,12 @@ def get_cards_for_export(db: Session, year_month: str | None = None) -> list[dic
         display_name = tx.card_owner_name or (
             f"미매핑({tx.card_last4})" if tx.card_last4 else "미매핑"
         )
+        user_email = matched_user.get("user_email") if matched_user else None
         seen[key] = {
             "bank": tx.source_bank,
             "card_number": card_number,
             "user_name": display_name,
+            "user_email": user_email,
             "year_month": tx.use_year_month,
             "total": 0,
         }

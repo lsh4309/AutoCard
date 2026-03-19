@@ -41,13 +41,14 @@ def create_card_user(body: CardUserIn, db: Session = Depends(get_db)):
         "card_number_full": card_no,
         "user_name": body.user_name,
         "bank_type": body.bank_type,
+        "user_email": body.user_email or None,
     })
     return _cu_dict(obj)
 
 
 @router.put("/cards/{card_no}")
 def update_card_user(card_no: str, body: CardUserIn, db: Session = Depends(get_db)):
-    obj = svc.update_card_user(db, card_no, body.model_dump())
+    obj = svc.update_card_user(db, card_no, body.model_dump(exclude_none=False))
     if not obj:
         raise HTTPException(status_code=404, detail="사용자 없음")
     return _cu_dict(obj)

@@ -34,6 +34,7 @@ def create_card_user(db: Session, data: dict):
         card_no=card_no,
         user_name=data["user_name"],
         card_type=data.get("bank_type", "KB"),
+        user_email=data.get("user_email") or None,
     )
 
 
@@ -42,6 +43,7 @@ def update_card_user(db: Session, card_no: str, data: dict):
         card_no=card_no,
         user_name=data["user_name"],
         card_type=data.get("bank_type", "KB"),
+        user_email=data.get("user_email") or None,
     )
 
 

@@ -12,7 +12,7 @@ def _extract_last4(card_no: str) -> str:
     return "".join(digits[-4:]) if len(digits) >= 4 else ""
 
 
-def _to_ui_format(row: dict[str, Any] | None, email_domain: str = "pine-partners.com") -> dict[str, Any] | None:
+def _to_ui_format(row: dict[str, Any] | None) -> dict[str, Any] | None:
     if not row:
         return None
     return {
@@ -22,7 +22,7 @@ def _to_ui_format(row: dict[str, Any] | None, email_domain: str = "pine-partners
         "card_last4": _extract_last4(row["card_no"]),
         "user_name": row["user_name"],
         "bank_type": row["card_type"],
-        "user_email": f"{row['user_name']}@{email_domain}",
+        "user_email": row.get("user_email") or None,
         "active_yn": True,
         "note": None,
     }
@@ -37,26 +37,26 @@ def get_all_card_users() -> list[dict[str, Any]]:
 def get_card_user_by_card_number(card_number_raw: str, bank_type: str | None = None) -> dict | None:
     """전체 카드번호로 사용자 조회"""
     r = _card_repo.find_by_card_number(card_number_raw, bank_type)
-    return _to_ui_format(r, "pinetree.com")
+    return _to_ui_format(r)
 
 
 def get_card_user_by_last4(card_last4: str, bank_type: str | None = None) -> dict | None:
     """끝 4자리로 사용자 조회"""
     r = _card_repo.find_by_last4(card_last4, bank_type)
-    return _to_ui_format(r, "pinetree.com")
+    return _to_ui_format(r)
 
 
-def create_card_user(card_no: str, user_name: str, card_type: str) -> dict:
-    r = _card_repo.create(card_no=card_no, user_name=user_name, card_type=card_type)
+def create_card_user(card_no: str, user_name: str, card_type: str, user_email: str | None = None) -> dict:
+    r = _card_repo.create(card_no=card_no, user_name=user_name, card_type=card_type, user_email=user_email)
     if not r:
         raise RuntimeError("카드 사용자 등록 실패")
-    result = _to_ui_format(r, "pinetree.com")
+    result = _to_ui_format(r)
     return result or {}
 
 
-def update_card_user(card_no: str, user_name: str, card_type: str) -> dict | None:
-    r = _card_repo.update(card_no=card_no, user_name=user_name, card_type=card_type)
-    return _to_ui_format(r, "pinetree.com")
+def update_card_user(card_no: str, user_name: str, card_type: str, user_email: str | None = None) -> dict | None:
+    r = _card_repo.update(card_no=card_no, user_name=user_name, card_type=card_type, user_email=user_email)
+    return _to_ui_format(r)
 
 
 def delete_card_user(card_no: str) -> bool:

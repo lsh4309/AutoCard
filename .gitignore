@@ -21,3 +21,5 @@ __pycache__/
 *.txt
 *.log
 .ipynb_checkpoints/
+
+data/card_auto_mail_token.json
