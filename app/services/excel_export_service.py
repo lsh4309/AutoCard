@@ -21,7 +21,6 @@ RESULT_COLUMNS = [
     "카드번호",
     "이용자명",
     "가맹점명",
-    "업종명",
     "승인금액",
     "프로젝트명",
     "솔루션",
@@ -47,19 +46,28 @@ THIN_BORDER = Border(
 
 def _get_transactions_for_card(
     db: Session,
-    card_identifier: str,
+    card_number: str,
     bank: str,
     year_month: str | None,
-    card_number_raw: str | None = None,
 ) -> list[Transaction]:
-    """card_identifier: 전체 카드번호 또는 끝4자리. card_number_raw가 전체번호면 우선 사용."""
+    """card_number: 전체 카드번호(16자리) 또는 미매핑 마스킹 시 끝4자리. 전체번호 우선 매칭."""
+    from app.parsers.common import normalize_card_number, extract_last4
+
     q = db.query(Transaction).filter(Transaction.source_bank == bank)
-    if card_number_raw and is_full_card_number(card_number_raw):
-        q = q.filter(Transaction.card_number_raw == card_number_raw)
-    else:
-        q = q.filter(Transaction.card_last4 == card_identifier)
     if year_month:
         q = q.filter(Transaction.use_year_month == year_month)
+
+    norm = normalize_card_number(card_number)
+    if norm and len(norm) >= 16:
+        last4 = extract_last4(card_number)
+        q = q.filter(Transaction.card_last4 == last4)  # DB 필터로 후보 축소
+        all_tx = q.order_by(Transaction.approval_datetime).all()
+        return [
+            t for t in all_tx
+            if (t.card_number_raw and normalize_card_number(t.card_number_raw) == norm)
+            or (t.card_last4 == last4)
+        ]
+    q = q.filter(Transaction.card_last4 == card_number)
     return q.order_by(Transaction.approval_datetime).all()
 
 
@@ -107,12 +115,12 @@ def _add_data_validations(
     acc_src = f"meta!$C${meta_start_row}:$C${acc_end}" if accounts else None
     flex_src = f"meta!$D${meta_start_row}:$D${flex_end}"
 
-    # 컬럼 인덱스 (1-based): 프로젝트=8, 솔루션=9, 계정과목=10, Flex=11
+    # 컬럼 인덱스 (1-based): 프로젝트=7, 솔루션=8, 계정과목=9, Flex=10
     col_configs = [
-        (8, proj_src),
-        (9, sol_src),
-        (10, acc_src),
-        (11, flex_src),
+        (7, proj_src),
+        (8, sol_src),
+        (9, acc_src),
+        (10, flex_src),
     ]
 
     for col_idx, formula in col_configs:
@@ -134,16 +142,13 @@ def _add_data_validations(
 
 def generate_card_excel(
     db: Session,
-    card_last4: str,
+    card_number: str,
     bank: str,
     year_month: str | None,
     user_name: str,
-    card_number_raw: str | None = None,
 ) -> Path:
-    """카드 단건 엑셀 파일 생성 후 파일 경로 반환"""
-    transactions = _get_transactions_for_card(
-        db, card_last4, bank, year_month, card_number_raw=card_number_raw
-    )
+    """카드 단건 엑셀 파일 생성 후 파일 경로 반환 (card_number: 전체번호 또는 끝4자리)"""
+    transactions = _get_transactions_for_card(db, card_number, bank, year_month)
 
     projects = [p["name"] for p in get_all_projects(db, active_only=True)]
     solutions = [s["name"] for s in get_all_solutions(db, active_only=True)]
@@ -165,15 +170,16 @@ def generate_card_excel(
 
     ws.row_dimensions[1].height = 30
 
-    # 데이터 작성
+    # 데이터 작성 (전체번호 있으면 사용, 없으면 tx.card_number_raw)
+    from app.parsers.common import normalize_card_number
+    card_display = card_number if (card_number and normalize_card_number(card_number) and len(normalize_card_number(card_number)) >= 16) else None
     for row_idx, tx in enumerate(transactions, start=2):
         values: list[Any] = [
             tx.approval_date,
             tx.approval_time,
-            tx.card_number_raw,
+            card_display or tx.card_number_raw or "",
             tx.card_owner_name or "",
             tx.merchant_name or "",
-            tx.merchant_category or "",
             tx.approval_amount,
             tx.project_name or "",
             tx.solution_name or "",
@@ -187,8 +193,8 @@ def generate_card_excel(
             cell = ws.cell(row=row_idx, column=col_idx, value=val)
             cell.border = THIN_BORDER
             cell.alignment = Alignment(vertical="center", wrap_text=False)
-            # 입력 필요 컬럼 배경색
-            if col_idx in (8, 9, 10, 11, 12, 13, 14):
+            # 입력 필요 컬럼 배경색 (프로젝트~기타사항)
+            if col_idx in (7, 8, 9, 10, 11, 12, 13):
                 cell.fill = INPUT_FILL
 
     # 드롭다운 추가
@@ -197,7 +203,7 @@ def generate_card_excel(
         _add_data_validations(ws, data_rows, projects, solutions, accounts)
 
     # 컬럼 너비 자동 조정
-    col_widths = [12, 10, 22, 10, 25, 15, 12, 25, 20, 25, 20, 20, 25, 15]
+    col_widths = [12, 10, 22, 10, 25, 12, 25, 20, 25, 20, 20, 25, 15]
     for col_idx, width in enumerate(col_widths, start=1):
         ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
 

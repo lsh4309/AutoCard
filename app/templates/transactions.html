@@ -25,8 +25,8 @@
       <input type="text" name="user_name" value="{{ filter_user }}" placeholder="홍길동" class="input-field w-28" />
     </div>
     <div>
-      <label class="block text-xs text-gray-500 mb-1">카드 끝 4자리</label>
-      <input type="text" name="card_last4" value="{{ filter_last4 }}" placeholder="1234" maxlength="4" class="input-field w-28" />
+      <label class="block text-xs text-gray-500 mb-1">카드번호</label>
+      <input type="text" name="card_number" value="{{ filter_card_number }}" placeholder="끝4자리 또는 전체번호" class="input-field w-40" />
     </div>
     <div>
       <label class="block text-xs text-gray-500 mb-1">년월 (YYYYMM)</label>
@@ -73,7 +73,6 @@
         <th class="px-3 py-3 text-left">카드번호</th>
         <th class="px-3 py-3 text-left">사용자</th>
         <th class="px-3 py-3 text-left">가맹점명</th>
-        <th class="px-3 py-3 text-left">업종</th>
         <th class="px-3 py-3 text-right">승인금액</th>
       </tr>
     </thead>
@@ -96,12 +95,11 @@
           {% endif %}
         </td>
         <td class="px-3 py-2 max-w-xs truncate" title="{{ tx.merchant_name or '' }}">{{ tx.merchant_name or '' }}</td>
-        <td class="px-3 py-2 text-gray-500">{{ tx.merchant_category or '' }}</td>
         <td class="px-3 py-2 text-right font-medium">{{ '{:,.0f}'.format(tx.approval_amount or 0) }}</td>
       </tr>
       {% else %}
       <tr>
-        <td colspan="8" class="px-6 py-12 text-center text-gray-400">
+        <td colspan="7" class="px-6 py-12 text-center text-gray-400">
           <i class="fa-solid fa-inbox text-4xl mb-2 block"></i>
           거래내역이 없습니다. 파일을 업로드하세요.
         </td>
@@ -120,7 +118,7 @@
   {% endif %}
   <span class="text-sm text-gray-600">{{ page }} / {{ total_pages }}</span>
   {% if page < total_pages %}
-  <a href="?bank={{ filter_bank }}&user_name={{ filter_user }}&card_last4={{ filter_last4 }}&year_month={{ filter_ym }}&mapping_status={{ filter_mapping }}&page={{ page + 1 }}"
+  <a href="?bank={{ filter_bank }}&user_name={{ filter_user }}&card_number={{ filter_card_number }}&year_month={{ filter_ym }}&mapping_status={{ filter_mapping }}&page={{ page + 1 }}"
      class="btn-secondary text-xs">다음 →</a>
   {% endif %}
 </div>

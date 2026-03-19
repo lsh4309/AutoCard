@@ -23,7 +23,7 @@
     <thead class="bg-gray-50 border-b border-gray-200">
       <tr>
         <th class="px-4 py-3 text-left text-gray-600">은행</th>
-        <th class="px-4 py-3 text-left text-gray-600">카드 끝 4자리 / 전체번호</th>
+        <th class="px-4 py-3 text-left text-gray-600">카드번호</th>
         <th class="px-4 py-3 text-left text-gray-600">사용자명</th>
         <th class="px-4 py-3 text-center text-gray-600">년월</th>
         <th class="px-4 py-3 text-center text-gray-600">전체</th>
@@ -38,17 +38,17 @@
             {{ card.bank }}
           </span>
         </td>
-        <td class="px-4 py-3 font-mono text-xs">{{ card.card_number_raw or card.card_last4 }}</td>
+        <td class="px-4 py-3 font-mono text-xs">{{ card.card_number }}</td>
         <td class="px-4 py-3 font-medium">{{ card.user_name }}</td>
         <td class="px-4 py-3 text-center text-gray-500">{{ card.year_month or '-' }}</td>
         <td class="px-4 py-3 text-center">{{ card.total }}</td>
         <td class="px-4 py-3 text-center">
           <button
             class="btn-success text-xs btn-generate"
-            data-last4="{{ card.card_last4 }}"
+            data-card-number="{{ card.card_number }}"
             data-bank="{{ card.bank }}"
             data-ym="{{ card.year_month or '' }}"
-            data-user="{{ card.user_name }}" data-raw="{{ card.card_number_raw or '' }}">
+            data-user="{{ card.user_name }}">
             <i class="fa-solid fa-file-excel mr-1"></i>생성
           </button>
         </td>
@@ -80,7 +80,7 @@
 <div class="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-700 space-y-1">
   <div class="font-semibold mb-1">엑셀 파일 사양</div>
   <div>• 시트명: <strong>내역</strong></div>
-  <div>• 컬럼: 승인일, 승인시간, 카드번호, 이용자명, 가맹점명, 업종명, 승인금액, 프로젝트명, 솔루션, 계정과목/지출내역, Flex 사전승인 유무, 참석자이름, 구매내역, 기타사항</div>
+  <div>• 컬럼: 승인일, 승인시간, 카드번호, 이용자명, 가맹점명, 승인금액, 프로젝트명, 솔루션, 계정과목/지출내역, Flex 사전승인 유무, 참석자이름, 구매내역, 기타사항</div>
   <div>• 드롭다운 적용: 프로젝트명, 솔루션, 계정과목/지출내역, Flex 사전승인 유무</div>
   <div>• 파일명 형식: {사용자명} {YYYYMM}({은행코드}).xlsx</div>
 </div>
@@ -93,17 +93,15 @@ document.querySelectorAll('.btn-generate').forEach(btn => {
 });
 
 async function generateFile(btn) {
-  const last4 = btn.dataset.last4;
+  const cardNumber = btn.dataset.cardNumber;
   const bank = btn.dataset.bank;
   const ym = btn.dataset.ym;
   const userName = btn.dataset.user;
-  const cardRaw = btn.dataset.raw || null;
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>생성중...';
   try {
-    const body = { card_last4: last4, bank, year_month: ym || null, user_name: userName };
-    if (cardRaw) body.card_number_raw = cardRaw;
+    const body = { card_number: cardNumber, bank, year_month: ym || null, user_name: userName };
     const res = await fetch('/api/exports/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -152,11 +150,10 @@ async function generateAll() {
     const genBtn = row.querySelector('.btn-generate');
     if (genBtn) {
       items.push({
-        last4: genBtn.dataset.last4,
+        cardNumber: genBtn.dataset.cardNumber,
         bank: genBtn.dataset.bank,
         ym: genBtn.dataset.ym,
         userName: genBtn.dataset.user,
-        cardRaw: genBtn.dataset.raw || null,
       });
     }
   });
@@ -164,8 +161,7 @@ async function generateAll() {
   let success = 0;
   for (const item of items) {
     try {
-      const body = { card_last4: item.last4, bank: item.bank, year_month: item.ym || null, user_name: item.userName };
-      if (item.cardRaw) body.card_number_raw = item.cardRaw;
+      const body = { card_number: item.cardNumber, bank: item.bank, year_month: item.ym || null, user_name: item.userName };
       const res = await fetch('/api/exports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

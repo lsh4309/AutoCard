@@ -25,7 +25,6 @@ class Transaction(Base):
     card_owner_email = Column(String(100), nullable=True)
 
     merchant_name = Column(String(200), nullable=True)
-    merchant_category = Column(String(100), nullable=True)
     approval_amount = Column(Float, nullable=True)
 
     # 관리자 입력 필드

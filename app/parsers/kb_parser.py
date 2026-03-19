@@ -17,7 +17,6 @@ KB_COLUMN_ALIASES: dict[str, list[str]] = {
     "card_number":        ["카드번호"],
     "user_name":          ["이용자명", "이용자", "카드사용자"],
     "merchant_name":      ["가맹점명", "가맹점", "이용가맹점"],
-    "merchant_category":  ["업종명", "업종", "가맹점업종"],
     "approval_amount":    ["승인금액", "이용금액", "거래금액"],
 }
 
@@ -71,7 +70,6 @@ def parse_kb_file(file_path: str | Path, batch_id: str) -> dict[str, Any]:
             amount = safe_float(row.get(col_map["approval_amount"]))
 
             user_col = col_map.get("user_name")
-            merchant_cat_col = col_map.get("merchant_category")
 
             record = {
                 "source_bank": "KB",
@@ -84,7 +82,6 @@ def parse_kb_file(file_path: str | Path, batch_id: str) -> dict[str, Any]:
                 "card_owner_name": str(row.get(user_col, "")).strip() if user_col else None,
                 "card_owner_email": None,
                 "merchant_name": str(row.get(col_map["merchant_name"], "")).strip(),
-                "merchant_category": str(row.get(merchant_cat_col, "")).strip() if merchant_cat_col else "",
                 "approval_amount": amount,
                 "project_name": None,
                 "solution_name": None,

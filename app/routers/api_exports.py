@@ -12,11 +12,10 @@ router = APIRouter(prefix="/api/exports", tags=["exports"])
 
 
 class ExportRequest(BaseModel):
-    card_last4: str
+    card_number: str
     bank: str
     year_month: str | None = None
     user_name: str
-    card_number_raw: str | None = None
 
 
 @router.post("/generate")
@@ -24,11 +23,10 @@ def generate_export(body: ExportRequest, db: Session = Depends(get_db)):
     try:
         file_path = generate_card_excel(
             db,
-            card_last4=body.card_last4,
+            card_number=body.card_number,
             bank=body.bank,
             year_month=body.year_month,
             user_name=body.user_name,
-            card_number_raw=body.card_number_raw,
         )
         return {"status": "ok", "file_name": file_path.name}
     except Exception as e:

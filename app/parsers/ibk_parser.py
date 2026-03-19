@@ -18,7 +18,6 @@ IBK_COLUMN_ALIASES: dict[str, list[str]] = {
     "approval_time":      ["승인시간", "거래시간", "이용시간"],
     "card_number":        ["카드번호"],
     "merchant_name":      ["이용가맹점명", "가맹점명", "가맹점"],
-    "merchant_category":  ["업종명", "업종"],
     "approval_amount":    ["승인금액", "이용금액", "거래금액"],
 }
 
@@ -97,11 +96,6 @@ def parse_ibk_file(file_path: str | Path, batch_id: str) -> dict[str, Any]:
             amount = safe_float(row.get(amount_col))
             merchant = str(row.get(merchant_col, "")).strip()
 
-            cat_col = col_map.get("merchant_category")
-            category = str(row.get(cat_col, "")).strip() if cat_col else ""
-            if category in ("nan", "None"):
-                category = ""
-
             record = {
                 "source_bank": "IBK",
                 "use_year_month": yyyymm,
@@ -113,7 +107,6 @@ def parse_ibk_file(file_path: str | Path, batch_id: str) -> dict[str, Any]:
                 "card_owner_name": None,  # IBK는 마스터에서 보강
                 "card_owner_email": None,
                 "merchant_name": merchant,
-                "merchant_category": category,
                 "approval_amount": amount,
                 "project_name": None,
                 "solution_name": None,
