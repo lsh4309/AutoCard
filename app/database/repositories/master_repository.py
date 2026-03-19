@@ -100,11 +100,11 @@ class BaseMasterRepository(PgRepository):
 
 
 class ProjectRepository(BaseMasterRepository):
-    """project_master. id SERIAL 있으나 API는 name을 식별자로 사용"""
+    """PROJECTS 테이블. id SERIAL 있으나 API는 name을 식별자로 사용"""
 
     def __init__(self):
         super().__init__(
-            table_name="project_master",
+            table_name='"PROJECTS"',
             key_field="name",
             select_fields=("name", "active_yn", "sort_order"),
             expose_name_as_id=True,
@@ -112,11 +112,11 @@ class ProjectRepository(BaseMasterRepository):
 
 
 class SolutionRepository(BaseMasterRepository):
-    """solution_master. id SERIAL PRIMARY KEY 사용"""
+    """SOLUTIONS 테이블. id SERIAL PRIMARY KEY 사용"""
 
     def __init__(self):
         super().__init__(
-            table_name="solution_master",
+            table_name='"SOLUTIONS"',
             key_field="id",
             select_fields=("id", "name", "active_yn", "sort_order"),
             expose_name_as_id=False,
@@ -124,11 +124,11 @@ class SolutionRepository(BaseMasterRepository):
 
 
 class AccountSubjectRepository(BaseMasterRepository):
-    """account_subject_master. id SERIAL 있으나 API는 name을 식별자로 사용"""
+    """EXPENSE_CATEGORIES 테이블. id SERIAL 있으나 API는 name을 식별자로 사용"""
 
     def __init__(self):
         super().__init__(
-            table_name="account_subject_master",
+            table_name='"EXPENSE_CATEGORIES"',
             key_field="name",
             select_fields=("name", "active_yn", "sort_order"),
             expose_name_as_id=True,

@@ -1,60 +1,32 @@
-"""테이블 생성 및 시드 데이터 - 스키마/초기화 전용"""
+"""테이블 생성 및 시드 데이터 - 스키마/초기화 전용 (대문자 테이블명)"""
 from app.database.connection import get_pg_conn
 
 
-def init_card_master_table() -> None:
-    """card_master 테이블 생성 (card_no_normalized, card_last4 포함)"""
+def init_card_users_table() -> None:
+    """CARD_USERS 테이블 생성"""
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS card_master (
+                CREATE TABLE IF NOT EXISTS "CARD_USERS" (
                     card_no   VARCHAR(30) NOT NULL,
                     user_name VARCHAR(50) NOT NULL,
                     card_type VARCHAR(20) NOT NULL,
                     card_no_normalized VARCHAR(30),
                     card_last4 CHAR(4),
-                    CONSTRAINT pk_card_master PRIMARY KEY (card_no)
+                    user_email VARCHAR(100),
+                    CONSTRAINT pk_card_users PRIMARY KEY (card_no)
                 )
             """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_card_master_card_no_normalized
-                ON card_master(card_no_normalized)
-            """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_card_master_card_last4
-                ON card_master(card_last4)
-            """)
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_card_users_normalized ON "CARD_USERS"(card_no_normalized)')
+            cur.execute('CREATE INDEX IF NOT EXISTS idx_card_users_last4 ON "CARD_USERS"(card_last4)')
 
 
-def migrate_card_master_add_columns() -> None:
-    """기존 card_master에 card_no_normalized, card_last4 컬럼 추가 및 백필"""
-    with get_pg_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute("ALTER TABLE card_master ADD COLUMN IF NOT EXISTS card_no_normalized VARCHAR(30)")
-            cur.execute("ALTER TABLE card_master ADD COLUMN IF NOT EXISTS card_last4 CHAR(4)")
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_card_master_card_no_normalized
-                ON card_master(card_no_normalized)
-            """)
-            cur.execute("""
-                CREATE INDEX IF NOT EXISTS idx_card_master_card_last4
-                ON card_master(card_last4)
-            """)
-            # 백필: 숫자만 추출, 끝 4자리
-            cur.execute("""
-                UPDATE card_master
-                SET card_no_normalized = regexp_replace(card_no, '[^0-9]', '', 'g'),
-                    card_last4 = RIGHT(regexp_replace(card_no, '[^0-9]', '', 'g'), 4)
-                WHERE card_no_normalized IS NULL AND card_no IS NOT NULL
-            """)
-
-
-def init_master_tables() -> None:
-    """project_master, solution_master, account_subject_master 테이블 생성"""
+def init_lookup_tables() -> None:
+    """PROJECTS, SOLUTIONS, EXPENSE_CATEGORIES 테이블 생성"""
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS project_master (
+                CREATE TABLE IF NOT EXISTS "PROJECTS" (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(200) NOT NULL UNIQUE,
                     active_yn BOOLEAN NOT NULL DEFAULT TRUE,
@@ -63,7 +35,7 @@ def init_master_tables() -> None:
                 )
             """)
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS solution_master (
+                CREATE TABLE IF NOT EXISTS "SOLUTIONS" (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(200) NOT NULL UNIQUE,
                     active_yn BOOLEAN NOT NULL DEFAULT TRUE,
@@ -72,7 +44,7 @@ def init_master_tables() -> None:
                 )
             """)
             cur.execute("""
-                CREATE TABLE IF NOT EXISTS account_subject_master (
+                CREATE TABLE IF NOT EXISTS "EXPENSE_CATEGORIES" (
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(200) NOT NULL UNIQUE,
                     active_yn BOOLEAN NOT NULL DEFAULT TRUE,
@@ -82,12 +54,12 @@ def init_master_tables() -> None:
             """)
 
 
-def seed_default_masters() -> None:
+def seed_default_lookups() -> None:
     """솔루션/계정과목 기본 데이터 삽입 (없을 때만)"""
     with get_pg_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO solution_master (name, active_yn, sort_order) VALUES
+                INSERT INTO "SOLUTIONS" (name, active_yn, sort_order) VALUES
                     ('DataRobot', TRUE, 1),
                     ('Github', TRUE, 2),
                     ('Presales - 솔루션', TRUE, 3),
@@ -95,7 +67,7 @@ def seed_default_masters() -> None:
                 ON CONFLICT (name) DO NOTHING
             """)
             cur.execute("""
-                INSERT INTO account_subject_master (name, active_yn, sort_order) VALUES
+                INSERT INTO "EXPENSE_CATEGORIES" (name, active_yn, sort_order) VALUES
                     ('식대', TRUE, 1),
                     ('교통비', TRUE, 2),
                     ('접대비', TRUE, 3),
@@ -106,3 +78,16 @@ def seed_default_masters() -> None:
                     ('기타경비', TRUE, 8)
                 ON CONFLICT (name) DO NOTHING
             """)
+
+
+# 하위 호환용 별칭
+def init_card_master_table() -> None:
+    init_card_users_table()
+
+
+def init_master_tables() -> None:
+    init_lookup_tables()
+
+
+def seed_default_masters() -> None:
+    seed_default_lookups()

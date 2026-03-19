@@ -4,7 +4,7 @@ from app.db import Base
 
 class Transaction(Base):
     """거래 데이터 - 거래내역 화면 표시 + 엑셀 내보내기용 최소 컬럼"""
-    __tablename__ = "transactions"
+    __tablename__ = "CARD_TRANSACTIONS"
 
     id = Column(Integer, primary_key=True, index=True)
     source_bank = Column(String(10), nullable=False)       # KB / IBK

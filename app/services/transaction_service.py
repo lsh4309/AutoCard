@@ -178,7 +178,7 @@ def remap_transactions(db: Session) -> int:
 
 
 def get_cards_for_export(db: Session, year_month: str | None = None) -> list[dict]:
-    """결과 파일 생성 대상 카드 목록 (전체번호 기반, 마스킹 시 card_master에서 card_no 조회)"""
+    """결과 파일 생성 대상 카드 목록 (전체번호 기반, 마스킹 시 CARD_USERS에서 card_no 조회)"""
     from collections import defaultdict
 
     full_lookup, last4_lookup = _build_card_lookups(db)
