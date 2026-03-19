@@ -5,7 +5,7 @@ from typing import Iterator
 import psycopg2
 from psycopg2.extensions import connection
 
-from app.config import PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD
+from app.core.config import PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD
 
 
 def create_connection() -> connection:

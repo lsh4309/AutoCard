@@ -1,10 +1,10 @@
+"""SQLAlchemy 엔진 및 세션 (ORM용)"""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-from app.config import DATABASE_URL
 
+from app.core.config import DATABASE_URL
 
 engine = create_engine(DATABASE_URL)
-
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -21,5 +21,5 @@ def get_db():
 
 
 def init_db():
-    from app import models  # noqa: F401
+    from app.models import transaction  # noqa: F401
     Base.metadata.create_all(bind=engine)

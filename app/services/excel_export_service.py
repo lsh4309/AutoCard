@@ -8,10 +8,10 @@ from openpyxl.worksheet.datavalidation import DataValidation
 from sqlalchemy.orm import Session
 from app.models import Transaction
 from app.parsers.common import is_full_card_number
-from app.services.master_service import (
+from app.services.lookup_service import (
     get_all_projects, get_all_solutions, get_all_account_subjects,
 )
-from app.config import EXPORT_DIR
+from app.core.config import EXPORT_DIR
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,8 @@
-"""카드 사용자 마스터 서비스 - PostgreSQL card_master 테이블"""
+"""카드 사용자 서비스 - CARD_USERS 테이블"""
 import re
 from typing import Any
 
-from app.database.repositories import CardRepository
+from app.db.repositories import CardRepository
 
 _card_repo = CardRepository()
 
@@ -29,7 +29,7 @@ def _to_ui_format(row: dict[str, Any] | None) -> dict[str, Any] | None:
 
 
 def get_all_card_users() -> list[dict[str, Any]]:
-    """card_master 전체 조회 (UI 호환 형식)"""
+    """CARD_USERS 전체 조회 (UI 호환 형식)"""
     rows = _card_repo.get_all()
     return [_to_ui_format(r) for r in rows]
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}프로젝트 마스터 - Card Auto{% endblock %}
-{% block page_title %}<i class="fa-solid fa-folder mr-2 text-blue-600"></i>프로젝트 마스터{% endblock %}
+{% block title %}프로젝트 - Card Auto{% endblock %}
+{% block page_title %}<i class="fa-solid fa-folder mr-2 text-blue-600"></i>프로젝트{% endblock %}
 
 {% block head %}
 <style>
@@ -128,7 +128,7 @@
 
 {% block scripts %}
 <script>
-  const API = '/api/masters/projects';
+  const API = '/api/lookups/projects';
 
   const modal = document.getElementById('item-modal');
   const modalTitle = document.getElementById('modal-title');

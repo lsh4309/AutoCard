@@ -3,7 +3,7 @@ from typing import Any, Callable, Iterable
 
 from psycopg2.extras import RealDictCursor
 
-from app.database.connection import get_pg_conn
+from app.db.connection import get_pg_conn
 
 
 class PgRepository:

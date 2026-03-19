@@ -1,14 +1,14 @@
-"""마스터 데이터 API"""
+"""참조 데이터 API (CARD_USERS, PROJECTS, SOLUTIONS, EXPENSE_CATEGORIES)"""
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.services import master_service as svc
+from app.core.database import get_db
+from app.services import lookup_service as svc
 
-router = APIRouter(prefix="/api/masters", tags=["masters"])
+router = APIRouter(prefix="/api/lookups", tags=["lookups"])
 
 
-# ── 카드 사용자 (PostgreSQL card_master) ───────────────────────────────────────────
+# ── CARD_USERS ─────────────────────────────────────────────────────────────
 class CardUserIn(BaseModel):
     bank_type: str
     card_last4: str
@@ -86,7 +86,7 @@ def _to_account(a):
     return {"id": a.get("id"), "name": a.get("name"), "active_yn": a.get("active_yn", True), "sort_order": a.get("sort_order", 0)}
 
 
-# ── 프로젝트 ──────────────────────────────────────────────
+# ── PROJECTS ──────────────────────────────────────────────────────────────
 class ProjectIn(BaseModel):
     name: str
     active_yn: bool = True
@@ -119,7 +119,7 @@ def delete_project(name: str, db: Session = Depends(get_db)):
     return {"status": "deleted"}
 
 
-# ── 솔루션 ────────────────────────────────────────────────
+# ── SOLUTIONS ─────────────────────────────────────────────────────────────
 class SolutionIn(BaseModel):
     name: str
     active_yn: bool = True
@@ -152,7 +152,7 @@ def delete_solution(sid: int, db: Session = Depends(get_db)):
     return {"status": "deleted"}
 
 
-# ── 계정과목 ──────────────────────────────────────────────
+# ── EXPENSE_CATEGORIES (계정과목) ──────────────────────────────────────────
 class AccountIn(BaseModel):
     name: str
     active_yn: bool = True

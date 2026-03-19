@@ -1,14 +1,14 @@
-"""프로젝트/솔루션/계정과목 마스터 Repository - 공통 BaseMasterRepository 기반"""
+"""PROJECTS, SOLUTIONS, EXPENSE_CATEGORIES Repository - 공통 BaseLookupRepository 기반"""
 import logging
 from typing import Any
 
-from app.database.base import PgRepository
+from app.db.base import PgRepository
 
 logger = logging.getLogger(__name__)
 
 
-class BaseMasterRepository(PgRepository):
-    """마스터 테이블 공통 CRUD. select_fields, key_field로 테이블별 차이 흡수"""
+class BaseLookupRepository(PgRepository):
+    """참조 테이블 공통 CRUD. select_fields, key_field로 테이블별 차이 흡수"""
 
     allowed_update_fields = {"name", "active_yn", "sort_order"}
 
@@ -29,18 +29,14 @@ class BaseMasterRepository(PgRepository):
         fields = ", ".join(self.select_fields)
         sql = f"SELECT {fields} FROM {self.table_name}"
         params: list[Any] = []
-
         if active_only:
             sql += " WHERE active_yn = TRUE"
-
         sql += " ORDER BY sort_order, name"
-
         try:
             rows = self.fetch_all(sql, params if params else None)
         except Exception as e:
             logger.exception("%s get_all 실패: %s", self.table_name, e)
             return []
-
         if self.expose_name_as_id:
             for row in rows:
                 row["id"] = row["name"]
@@ -65,21 +61,17 @@ class BaseMasterRepository(PgRepository):
     ) -> dict[str, Any] | None:
         updates = []
         params = []
-
         for key, value in data.items():
             if key in self.allowed_update_fields and value is not None:
                 updates.append(f"{key} = %s")
                 params.append(value)
-
         if not updates:
             for row in self.get_all():
                 if row[self.key_field] == key_value:
                     return row
             return None
-
         fields = ", ".join(self.select_fields)
         params.append(key_value)
-
         sql = f"""
             UPDATE {self.table_name}
                SET {", ".join(updates)}
@@ -99,8 +91,8 @@ class BaseMasterRepository(PgRepository):
         return deleted > 0
 
 
-class ProjectRepository(BaseMasterRepository):
-    """PROJECTS 테이블. id SERIAL 있으나 API는 name을 식별자로 사용"""
+class ProjectRepository(BaseLookupRepository):
+    """PROJECTS 테이블"""
 
     def __init__(self):
         super().__init__(
@@ -111,8 +103,8 @@ class ProjectRepository(BaseMasterRepository):
         )
 
 
-class SolutionRepository(BaseMasterRepository):
-    """SOLUTIONS 테이블. id SERIAL PRIMARY KEY 사용"""
+class SolutionRepository(BaseLookupRepository):
+    """SOLUTIONS 테이블"""
 
     def __init__(self):
         super().__init__(
@@ -123,8 +115,8 @@ class SolutionRepository(BaseMasterRepository):
         )
 
 
-class AccountSubjectRepository(BaseMasterRepository):
-    """EXPENSE_CATEGORIES 테이블. id SERIAL 있으나 API는 name을 식별자로 사용"""
+class AccountSubjectRepository(BaseLookupRepository):
+    """EXPENSE_CATEGORIES 테이블"""
 
     def __init__(self):
         super().__init__(

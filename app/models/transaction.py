@@ -1,5 +1,7 @@
+"""거래내역 모델"""
 from sqlalchemy import Column, Integer, String, Text, Float
-from app.db import Base
+
+from app.core.database import Base
 
 
 class Transaction(Base):

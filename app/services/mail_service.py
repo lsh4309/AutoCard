@@ -9,7 +9,7 @@ from typing import Any
 import msal
 import requests
 
-from app.config import (
+from app.core.config import (
     AZURE_CLIENT_ID,
     AZURE_TENANT_ID,
     EMAIL_SENDER,

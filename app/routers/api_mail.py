@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.db import get_db
+from app.core.database import get_db
 from app.services import mail_service
 from app.services.transaction_service import get_cards_for_export
 

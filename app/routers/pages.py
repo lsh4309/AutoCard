@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from app.db import get_db
-from app.services.master_service import (
+from app.core.database import get_db
+from app.services.lookup_service import (
     get_all_card_users, get_all_projects,
     get_all_solutions, get_all_account_subjects,
 )
@@ -71,28 +71,28 @@ async def transactions_page(
     })
 
 
-@router.get("/masters/cards", response_class=HTMLResponse)
-async def masters_cards(request: Request, db: Session = Depends(get_db)):
+@router.get("/lookups/cards", response_class=HTMLResponse)
+async def lookups_cards(request: Request, db: Session = Depends(get_db)):
     users = get_all_card_users(db)
-    return templates.TemplateResponse("masters_cards.html", {"request": request, "users": users})
+    return templates.TemplateResponse("card_users.html", {"request": request, "users": users})
 
 
-@router.get("/masters/projects", response_class=HTMLResponse)
-async def masters_projects(request: Request, db: Session = Depends(get_db)):
+@router.get("/lookups/projects", response_class=HTMLResponse)
+async def lookups_projects(request: Request, db: Session = Depends(get_db)):
     projects = get_all_projects(db)
-    return templates.TemplateResponse("masters_projects.html", {"request": request, "projects": projects})
+    return templates.TemplateResponse("projects.html", {"request": request, "projects": projects})
 
 
-@router.get("/masters/solutions", response_class=HTMLResponse)
-async def masters_solutions(request: Request, db: Session = Depends(get_db)):
+@router.get("/lookups/solutions", response_class=HTMLResponse)
+async def lookups_solutions(request: Request, db: Session = Depends(get_db)):
     solutions = get_all_solutions(db)
-    return templates.TemplateResponse("masters_solutions.html", {"request": request, "solutions": solutions})
+    return templates.TemplateResponse("solutions.html", {"request": request, "solutions": solutions})
 
 
-@router.get("/masters/accounts", response_class=HTMLResponse)
-async def masters_accounts(request: Request, db: Session = Depends(get_db)):
+@router.get("/lookups/accounts", response_class=HTMLResponse)
+async def lookups_accounts(request: Request, db: Session = Depends(get_db)):
     accounts = get_all_account_subjects(db)
-    return templates.TemplateResponse("masters_accounts.html", {"request": request, "accounts": accounts})
+    return templates.TemplateResponse("expense_categories.html", {"request": request, "accounts": accounts})
 
 
 @router.get("/exports", response_class=HTMLResponse)

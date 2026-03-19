@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from app.db import get_db
+from app.core.database import get_db
 from app.services.excel_export_service import generate_card_excel
 from app.services.transaction_service import get_cards_for_export
 
@@ -35,7 +35,7 @@ def generate_export(body: ExportRequest, db: Session = Depends(get_db)):
 
 @router.get("/download/{file_name}")
 def download_file(file_name: str):
-    from app.config import EXPORT_DIR
+    from app.core.config import EXPORT_DIR
     file_path = EXPORT_DIR / file_name
     if not file_path.exists():
         raise HTTPException(status_code=404, detail="파일 없음")

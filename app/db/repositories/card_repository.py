@@ -1,7 +1,7 @@
-"""카드 사용자 마스터 Repository - SQL WHERE 기반 조회 (전체 스캔 제거)"""
+"""카드 사용자 Repository - SQL WHERE 기반 조회"""
 from typing import Any
 
-from app.database.base import PgRepository
+from app.db.base import PgRepository
 from app.parsers.common import normalize_card_number, extract_last4
 
 
@@ -65,11 +65,9 @@ class CardRepository(PgRepository):
     def find_by_card_number(
         self, card_number_raw: str, card_type: str | None = None
     ) -> dict[str, Any] | None:
-        """전체 카드번호로 사용자 조회 - SQL WHERE card_no_normalized 사용"""
         normalized = normalize_card_number(card_number_raw)
         if not normalized or len(normalized) < 16:
             return None
-
         if card_type:
             return self.fetch_one(
                 """
@@ -92,10 +90,8 @@ class CardRepository(PgRepository):
     def find_by_last4(
         self, card_last4: str, card_type: str | None = None
     ) -> dict[str, Any] | None:
-        """끝 4자리로 사용자 조회 - SQL WHERE card_last4 사용"""
         if not card_last4 or len(card_last4) != 4:
             return None
-
         if card_type:
             return self.fetch_one(
                 """
@@ -117,7 +113,6 @@ class CardRepository(PgRepository):
         )
 
     def get_card_type_map(self) -> dict[str, str]:
-        """카드번호(정규화) -> card_type 매핑. card_no_normalized 있으면 활용"""
         rows = self.fetch_all(
             """
             SELECT card_no, card_no_normalized, card_last4, card_type

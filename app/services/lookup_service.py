@@ -1,8 +1,8 @@
-"""마스터 데이터 CRUD 서비스"""
+"""참조 데이터 CRUD 서비스 (CARD_USERS, PROJECTS, SOLUTIONS, EXPENSE_CATEGORIES)"""
 from sqlalchemy.orm import Session
 
-from app.services import card_master_service as card_svc
-from app.database.repositories import (
+from app.services import card_user_service as card_svc
+from app.db.repositories import (
     ProjectRepository,
     SolutionRepository,
     AccountSubjectRepository,
@@ -13,7 +13,7 @@ _solution_repo = SolutionRepository()
 _account_repo = AccountSubjectRepository()
 
 
-# ── 카드 사용자 마스터 (PostgreSQL card_master) ─────────────────────────────────────
+# ── CARD_USERS ─────────────────────────────────────────────────────────────
 def get_all_card_users(db: Session = None) -> list[dict]:
     return card_svc.get_all_card_users()
 
@@ -51,7 +51,7 @@ def delete_card_user(db: Session, card_no: str) -> bool:
     return card_svc.delete_card_user(card_no)
 
 
-# ── 프로젝트 마스터 (PostgreSQL project_master) ───────────────────────────────────────
+# ── PROJECTS ───────────────────────────────────────────────────────────────
 def get_all_projects(db: Session = None, active_only: bool = False) -> list[dict]:
     return _project_repo.get_all(active_only=active_only)
 
@@ -75,7 +75,7 @@ def delete_project(db: Session, project_id: int | str) -> bool:
     return _project_repo.delete(str(project_id))
 
 
-# ── 솔루션 마스터 (PostgreSQL solution_master) ─────────────────────────────────────────
+# ── SOLUTIONS ──────────────────────────────────────────────────────────────
 def get_all_solutions(db: Session = None, active_only: bool = False) -> list[dict]:
     return _solution_repo.get_all(active_only=active_only)
 
@@ -99,7 +99,7 @@ def delete_solution(db: Session, sol_id: int) -> bool:
     return _solution_repo.delete(sol_id)
 
 
-# ── 계정과목 마스터 (PostgreSQL account_subject_master) ───────────────────────────────
+# ── EXPENSE_CATEGORIES ──────────────────────────────────────────────────────
 def get_all_account_subjects(db: Session = None, active_only: bool = False) -> list[dict]:
     return _account_repo.get_all(active_only=active_only)
 

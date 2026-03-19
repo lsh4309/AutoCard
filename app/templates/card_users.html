@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}카드 사용자 마스터 - Card Auto{% endblock %}
-{% block page_title %}<i class="fa-solid fa-id-card mr-2 text-blue-600"></i>카드 사용자 마스터{% endblock %}
+{% block title %}카드 사용자 - Card Auto{% endblock %}
+{% block page_title %}<i class="fa-solid fa-id-card mr-2 text-blue-600"></i>카드 사용자{% endblock %}
 
 {% block content %}
 <div class="flex gap-6">
@@ -142,7 +142,7 @@ async function submitUser() {
     return;
   }
   const cardNo = body.card_number_full || editCardNo;
-  const url = editCardNo ? `/api/masters/cards/${encodeURIComponent(editCardNo)}` : '/api/masters/cards';
+  const url = editCardNo ? `/api/lookups/cards/${encodeURIComponent(editCardNo)}` : '/api/lookups/cards';
   const method = editCardNo ? 'PUT' : 'POST';
   try {
     const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
@@ -159,7 +159,7 @@ async function submitUser() {
 async function deleteUser(cardNo) {
   if (!confirm('삭제하시겠습니까?')) return;
   try {
-    const res = await fetch(`/api/masters/cards/${encodeURIComponent(cardNo)}`, { method: 'DELETE' });
+    const res = await fetch(`/api/lookups/cards/${encodeURIComponent(cardNo)}`, { method: 'DELETE' });
     if (res.ok) {
       showToast('삭제 완료', 'success');
       setTimeout(() => location.reload(), 800);

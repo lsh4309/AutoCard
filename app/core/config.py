@@ -3,7 +3,7 @@ from pathlib import Path
 from urllib.parse import quote_plus
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 # .env 로드 (PostgreSQL 환경변수)
 load_dotenv(BASE_DIR / ".env")

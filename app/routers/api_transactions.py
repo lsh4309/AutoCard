@@ -1,7 +1,7 @@
 """거래 데이터 API"""
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.db import get_db
+from app.core.database import get_db
 from app.services.transaction_service import (
     get_transactions, remap_transactions, delete_all_transactions,
 )

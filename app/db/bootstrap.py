@@ -1,5 +1,5 @@
 """테이블 생성 및 시드 데이터 - 스키마/초기화 전용 (대문자 테이블명)"""
-from app.database.connection import get_pg_conn
+from app.db.connection import get_pg_conn
 
 
 def init_card_users_table() -> None:

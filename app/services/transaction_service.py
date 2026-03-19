@@ -6,7 +6,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from app.models import Transaction
-from app.services.master_service import get_all_card_users
+from app.services.lookup_service import get_all_card_users
 from app.parsers.common import is_full_card_number, normalize_card_number
 from app.parsers.kb_parser import parse_kb_file
 from app.parsers.ibk_parser import parse_ibk_file

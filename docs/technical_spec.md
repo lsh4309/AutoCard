@@ -151,7 +151,7 @@ PostgreSQL `card_master` 테이블 연동. `CardRepository` 래퍼.
 
 ### 2.3 models/ - SQLAlchemy 모델
 
-현재 `app/models.py`에 단일 모델 정의.
+현재 `app/models/transaction.py`에 Transaction 모델 정의.
 
 #### Transaction (SQLite transactions 테이블)
 
@@ -179,7 +179,7 @@ PostgreSQL `card_master` 테이블 연동. `CardRepository` 래퍼.
 
 ---
 
-### 2.4 database/ - PostgreSQL 연동 (리팩토링 구조)
+### 2.4 db/ - PostgreSQL 연동 (psycopg2 직접 쿼리)
 
 #### connection.py
 - `create_connection()`, `get_pg_conn()`: 연결 생성, 트랜잭션(commit/rollback) 자동 처리
@@ -263,5 +263,5 @@ get_cards_for_export 결과:
 
 ## 5. 설정 및 환경
 
-- `app/config.py`: `DATABASE_URL` (PostgreSQL), `UPLOAD_DIR`, `EXPORT_DIR`, `PG_*` 환경변수
+- `app/core/config.py`: `DATABASE_URL` (PostgreSQL), `UPLOAD_DIR`, `EXPORT_DIR`, `PG_*` 환경변수
 - `.env`: PostgreSQL 연결 정보 (PG_HOST, PG_PORT, PG_DATABASE, PG_USER, PG_PASSWORD)

@@ -4,10 +4,10 @@ import uuid
 from pathlib import Path
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from sqlalchemy.orm import Session
-from app.db import get_db
+from app.core.database import get_db
 from app.services.transaction_service import upload_and_save
 from app.parsers.common import detect_bank_type_from_file
-from app.config import UPLOAD_DIR
+from app.core.config import UPLOAD_DIR
 
 router = APIRouter(prefix="/api/uploads", tags=["uploads"])
 
