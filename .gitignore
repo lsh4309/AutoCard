@@ -23,3 +23,10 @@ __pycache__/
 .ipynb_checkpoints/
 
 data/card_auto_mail_token.json
+
+# 백업 폴더 전체 차단 (카드번호/실명/이메일 포함)
+backups/
+
+# uploads/exports 폴더 명시적 차단
+uploads/
+exports/
