@@ -160,10 +160,14 @@ Card_Auto/
 | DELETE | `/api/transactions` | 거래내역 전체 삭제 |
 | GET/POST/PUT/DELETE | `/api/lookups/cards` | 카드 사용자 CRUD |
 | GET/POST/PUT/DELETE | `/api/lookups/projects` | 프로젝트 CRUD |
+| POST | `/api/lookups/projects/reorder` | 프로젝트 순서 저장 `ordered_ids` |
 | GET/POST/PUT/DELETE | `/api/lookups/solutions` | 솔루션 CRUD |
+| POST | `/api/lookups/solutions/reorder` | 솔루션 순서 저장 `ordered_ids` |
 | GET/POST/PUT/DELETE | `/api/lookups/accounts` | 계정과목 CRUD |
+| POST | `/api/lookups/accounts/reorder` | 계정과목 순서 저장 `ordered_ids` |
 | POST | `/api/exports/generate` | 엑셀 생성 |
 | GET | `/api/exports/download/{filename}` | 엑셀 다운로드 |
+| POST | `/api/exports/download-all-zip` | 전체 엑셀 ZIP 다운로드 |
 | GET | `/api/exports/cards` | 발송 대상 카드 목록 |
 | GET | `/api/mail/auth/status` | Outlook 인증 상태 |
 | POST | `/api/mail/auth/start` | Outlook 인증 시작 |

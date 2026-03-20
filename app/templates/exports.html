@@ -17,6 +17,18 @@
   </form>
 </div>
 
+<!-- 관리자 액션 버튼 (상단) -->
+{% if cards %}
+<div class="mb-4 flex gap-3">
+  <button id="btn-download-all-zip" onclick="downloadAllZip()" class="btn-primary">
+    <i class="fa-solid fa-file-zipper mr-2"></i>전체 엑셀 다운
+  </button>
+  <button onclick="openMailDialog()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
+    <i class="fa-solid fa-paper-plane"></i>전체 메일 발송
+  </button>
+</div>
+{% endif %}
+
 <!-- 카드 목록 -->
 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
   <table class="w-full text-sm">
@@ -51,7 +63,7 @@
             data-bank="{{ card.bank }}"
             data-ym="{{ card.year_month or '' }}"
             data-user="{{ card.user_name }}">
-            <i class="fa-solid fa-file-excel mr-1"></i>생성
+            <i class="fa-solid fa-file-excel mr-1"></i>엑셀 다운
           </button>
         </td>
         <td class="px-4 py-3 text-xs text-gray-500">
@@ -88,17 +100,6 @@
     </tbody>
   </table>
 </div>
-
-{% if cards %}
-<div class="mt-4 flex gap-3">
-  <button onclick="generateAll()" class="btn-primary">
-    <i class="fa-solid fa-file-zipper mr-2"></i>전체 일괄 생성
-  </button>
-  <button onclick="openMailDialog()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg flex items-center gap-2">
-    <i class="fa-solid fa-paper-plane"></i>전체 메일 발송
-  </button>
-</div>
-{% endif %}
 
 <!-- ══════════════ 메일 발송 다이얼로그 ══════════════ -->
 <div id="mail-dialog" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center">
@@ -167,9 +168,6 @@
   </div>
 </div>
 
-<!-- 다운로드 링크 영역 -->
-<div id="download-list" class="mt-5 space-y-2"></div>
-
 <!-- 안내 -->
 <div class="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4 text-xs text-amber-700 space-y-1">
   <div class="font-semibold mb-1">엑셀 파일 사양</div>
@@ -196,7 +194,7 @@ async function generateFile(btn) {
   const userName = btn.dataset.user;
 
   btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>생성중...';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>다운중...';
   try {
     const body = { card_number: cardNumber, bank, year_month: ym || null, user_name: userName };
     const res = await fetch('/api/exports/generate', {
@@ -206,8 +204,11 @@ async function generateFile(btn) {
     });
     const data = await res.json();
     if (res.ok) {
-      showToast(`${data.file_name} 생성 완료`, 'success');
-      addDownloadLink(data.file_name);
+      showToast(`${data.file_name} 다운로드`, 'success');
+      const a = document.createElement('a');
+      a.href = '/api/exports/download/' + encodeURIComponent(data.file_name);
+      a.download = data.file_name;
+      a.click();
     } else {
       showToast(data.detail || '오류 발생', 'error');
     }
@@ -215,25 +216,8 @@ async function generateFile(btn) {
     showToast('오류: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '<i class="fa-solid fa-file-excel mr-1"></i>생성';
+    btn.innerHTML = '<i class="fa-solid fa-file-excel mr-1"></i>엑셀 다운';
   }
-}
-
-function addDownloadLink(fileName) {
-  const container = document.getElementById('download-list');
-  const el = document.createElement('div');
-  el.className = 'bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center justify-between';
-  el.innerHTML = `
-    <div class="flex items-center gap-2 text-sm text-green-800">
-      <i class="fa-solid fa-file-excel text-green-600"></i>
-      <span class="font-medium">${fileName}</span>
-    </div>
-    <a href="/api/exports/download/${encodeURIComponent(fileName)}"
-       class="btn-success text-xs" download>
-      <i class="fa-solid fa-download mr-1"></i>다운로드
-    </a>
-  `;
-  container.prepend(el);
 }
 
 // ─── 메일 발송 기능 ────────────────────────────────────────────────
@@ -413,43 +397,61 @@ function _showResultPanel(data) {
   }).join('');
 }
 
-// ─── 기존 기능 ──────────────────────────────────────────────────
+// ─── 전체 엑셀 다운 (ZIP) ─────────────────────────────────────────
 
-async function generateAll() {
+async function downloadAllZip() {
   const rows = document.querySelectorAll('tbody tr');
-  const btn = event.target;
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>생성 중...';
+  const btn = document.getElementById('btn-download-all-zip');
+  if (!btn) return;
 
   const items = [];
   rows.forEach(row => {
     const genBtn = row.querySelector('.btn-generate');
     if (genBtn) {
       items.push({
-        cardNumber: genBtn.dataset.cardNumber,
+        card_number: genBtn.dataset.cardNumber,
         bank: genBtn.dataset.bank,
-        ym: genBtn.dataset.ym,
-        userName: genBtn.dataset.user,
+        year_month: genBtn.dataset.ym || null,
+        user_name: genBtn.dataset.user,
       });
     }
   });
 
-  let success = 0;
-  for (const item of items) {
-    try {
-      const body = { card_number: item.cardNumber, bank: item.bank, year_month: item.ym || null, user_name: item.userName };
-      const res = await fetch('/api/exports/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      const data = await res.json();
-      if (res.ok) { addDownloadLink(data.file_name); success++; }
-    } catch {}
+  if (items.length === 0) {
+    showToast('다운로드할 카드가 없습니다', 'error');
+    return;
   }
-  showToast(`${success}개 파일 생성 완료`, 'success');
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fa-solid fa-file-zipper mr-2"></i>전체 일괄 생성';
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>ZIP 생성 중...';
+  try {
+    const res = await fetch('/api/exports/download-all-zip', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cards: items }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      if (err.detail) throw new Error(err.detail);
+      throw new Error('ZIP 생성 실패');
+    }
+    const blob = await res.blob();
+    const contentDisp = res.headers.get('Content-Disposition');
+    const match = contentDisp && contentDisp.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : 'card_exports.zip';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(`${items.length}개 파일 ZIP 다운로드 완료`, 'success');
+  } catch (e) {
+    showToast('오류: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-file-zipper mr-2"></i>전체 엑셀 다운';
+  }
 }
 </script>
 {% endblock %}

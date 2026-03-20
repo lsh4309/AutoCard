@@ -90,7 +90,14 @@ def _to_account(a):
 class ProjectIn(BaseModel):
     name: str
     active_yn: bool = True
-    sort_order: int = 0
+
+
+class ReorderStrIdsBody(BaseModel):
+    ordered_ids: list[str]
+
+
+class ReorderIntIdsBody(BaseModel):
+    ordered_ids: list[int]
 
 
 @router.get("/projects")
@@ -119,11 +126,19 @@ def delete_project(name: str, db: Session = Depends(get_db)):
     return {"status": "deleted"}
 
 
+@router.post("/projects/reorder")
+def reorder_projects(body: ReorderStrIdsBody, db: Session = Depends(get_db)):
+    try:
+        svc.reorder_projects(db, body.ordered_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "ok"}
+
+
 # ── SOLUTIONS ─────────────────────────────────────────────────────────────
 class SolutionIn(BaseModel):
     name: str
     active_yn: bool = True
-    sort_order: int = 0
 
 
 @router.get("/solutions")
@@ -152,11 +167,19 @@ def delete_solution(sid: int, db: Session = Depends(get_db)):
     return {"status": "deleted"}
 
 
+@router.post("/solutions/reorder")
+def reorder_solutions(body: ReorderIntIdsBody, db: Session = Depends(get_db)):
+    try:
+        svc.reorder_solutions(db, body.ordered_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "ok"}
+
+
 # ── EXPENSE_CATEGORIES (계정과목) ──────────────────────────────────────────
 class AccountIn(BaseModel):
     name: str
     active_yn: bool = True
-    sort_order: int = 0
 
 
 @router.get("/accounts")
@@ -183,3 +206,12 @@ def delete_account(name: str, db: Session = Depends(get_db)):
     if not svc.delete_account_subject(db, name):
         raise HTTPException(status_code=404, detail="계정과목 없음")
     return {"status": "deleted"}
+
+
+@router.post("/accounts/reorder")
+def reorder_accounts(body: ReorderStrIdsBody, db: Session = Depends(get_db)):
+    try:
+        svc.reorder_account_subjects(db, body.ordered_ids)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"status": "ok"}

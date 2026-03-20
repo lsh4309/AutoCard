@@ -3,6 +3,7 @@ import logging
 from typing import Any
 
 from app.db.base import PgRepository
+from app.db.connection import get_pg_conn
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +90,28 @@ class BaseLookupRepository(PgRepository):
             (key_value,),
         )
         return deleted > 0
+
+    def get_max_sort_order(self) -> int:
+        row = self.fetch_one(
+            f"SELECT COALESCE(MAX(sort_order), 0) AS m FROM {self.table_name}"
+        )
+        return int(row["m"]) if row and row.get("m") is not None else 0
+
+    def reorder_keys(self, ordered_keys: list[Any]) -> None:
+        """ordered_keys 순서대로 sort_order를 100, 200, 300... 으로 일괄 갱신 (단일 트랜잭션)"""
+        all_rows = self.get_all()
+        expected = {row[self.key_field] for row in all_rows}
+        got = set(ordered_keys)
+        if len(ordered_keys) != len(expected) or got != expected:
+            raise ValueError("순서 목록이 전체 항목과 일치하지 않습니다")
+
+        with get_pg_conn() as conn:
+            with conn.cursor() as cur:
+                for i, key in enumerate(ordered_keys):
+                    cur.execute(
+                        f"UPDATE {self.table_name} SET sort_order = %s WHERE {self.key_field} = %s",
+                        ((i + 1) * 100, key),
+                    )
 
 
 class ProjectRepository(BaseLookupRepository):

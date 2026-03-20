@@ -4,42 +4,32 @@
 
 {% block content %}
 <div class="max-w-2xl">
-  <div class="flex items-center justify-between mb-3">
-    <span class="text-sm text-gray-600">총 <strong>{{ accounts|length }}</strong>개</span>
-    <button onclick="openModal()" class="btn-primary text-xs">
-      <i class="fa-solid fa-plus mr-1"></i>신규 등록
-    </button>
+  <script type="application/json" id="lookup-items-json">{{ lookup_reorder_items_json | safe }}</script>
+
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <span class="text-sm text-gray-600">총 <strong id="lookup-count">{{ accounts|length }}</strong>개</span>
+    <div class="flex flex-wrap items-center gap-2">
+      <button id="btn-lookup-add" type="button" class="btn-primary text-xs inline-flex items-center gap-1">
+        <i class="fa-solid fa-plus" aria-hidden="true"></i><span>추가</span>
+      </button>
+      <button id="btn-reorder-enter" type="button" class="btn-secondary text-xs inline-flex items-center gap-1">
+        <i class="fa-solid fa-arrows-up-down" aria-hidden="true"></i><span>순서 편집</span>
+      </button>
+      <div id="reorder-toolbar" class="hidden flex flex-wrap items-center gap-2">
+        <button id="btn-reorder-save" type="button" class="btn-primary text-xs inline-flex items-center gap-1">
+          <i class="fa-solid fa-check" aria-hidden="true"></i><span>저장</span>
+        </button>
+        <button id="btn-reorder-cancel" type="button" class="btn-secondary text-xs inline-flex items-center gap-1">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i><span>취소</span>
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+
+  <div id="lookup-table-wrap" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
     <table class="w-full text-sm">
-      <thead class="bg-gray-50 border-b border-gray-200">
-        <tr>
-          <th class="px-4 py-3 text-left text-gray-600">계정과목/지출내역</th>
-          <th class="px-4 py-3 text-center text-gray-600">순서</th>
-          <th class="px-4 py-3 text-center text-gray-600">활성</th>
-          <th class="px-4 py-3 text-center text-gray-600">관리</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for a in accounts %}
-        <tr class="border-t border-gray-100 hover:bg-gray-50">
-          <td class="px-4 py-3 font-medium">{{ a.name }}</td>
-          <td class="px-4 py-3 text-center text-gray-500">{{ a.sort_order }}</td>
-          <td class="px-4 py-3 text-center">
-            {% if a.active_yn %}<span class="badge-ok">활성</span>
-            {% else %}<span class="badge-error">비활성</span>{% endif %}
-          </td>
-          <td class="px-4 py-3 text-center">
-            <button onclick="editItem({{ a.name | tojson }}, {{ a.name | tojson }}, {{ a.sort_order }}, {{ 'true' if a.active_yn else 'false' }})"
-              class="text-blue-600 hover:text-blue-800 mr-3"><i class="fa-solid fa-pen-to-square"></i></button>
-            <button onclick="deleteItem({{ a.name | tojson }})" class="text-red-500 hover:text-red-700">
-              <i class="fa-solid fa-trash"></i></button>
-          </td>
-        </tr>
-        {% else %}
-        <tr><td colspan="4" class="px-6 py-8 text-center text-gray-400">등록된 계정과목이 없습니다.</td></tr>
-        {% endfor %}
-      </tbody>
+      <thead id="lookup-thead" class="bg-gray-50 border-b border-gray-200"></thead>
+      <tbody id="lookup-tbody"></tbody>
     </table>
   </div>
 </div>
@@ -53,61 +43,109 @@
         <label class="block text-xs text-gray-600 mb-1">계정과목명 <span class="text-red-500">*</span></label>
         <input id="f-name" type="text" class="input-field" placeholder="예: 식대, 교통비, 접대비" />
       </div>
-      <div>
-        <label class="block text-xs text-gray-600 mb-1">정렬 순서</label>
-        <input id="f-order" type="number" value="0" class="input-field" />
-      </div>
       <label class="flex items-center gap-2 cursor-pointer">
         <input id="f-active" type="checkbox" checked class="rounded" />
         <span class="text-xs text-gray-700">활성 상태</span>
       </label>
     </div>
     <div class="flex gap-3 mt-4">
-      <button onclick="submitItem()" class="btn-primary flex-1">저장</button>
-      <button onclick="closeModal()" class="btn-secondary flex-1">취소</button>
+      <button id="submit-item-btn" type="button" class="btn-primary flex-1">저장</button>
+      <button id="close-modal-btn" type="button" class="btn-secondary flex-1">취소</button>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/lookup_reorder.js"></script>
 <script>
-const API = '/api/lookups/accounts';
-function openModal() {
-  document.getElementById('modal-title').textContent = '계정과목 등록';
-  document.getElementById('edit-id').value = '';
-  document.getElementById('f-name').value = '';
-  document.getElementById('f-order').value = '0';
-  document.getElementById('f-active').checked = true;
-  document.getElementById('item-modal').classList.remove('hidden');
-}
-function editItem(id, name, order, active) {
-  document.getElementById('modal-title').textContent = '계정과목 수정';
-  document.getElementById('edit-id').value = id;
-  document.getElementById('f-name').value = name;
-  document.getElementById('f-order').value = order;
-  document.getElementById('f-active').checked = active;
-  document.getElementById('item-modal').classList.remove('hidden');
-}
-function closeModal() { document.getElementById('item-modal').classList.add('hidden'); }
-async function submitItem() {
-  const id = document.getElementById('edit-id').value;
-  const body = {
-    name: document.getElementById('f-name').value.trim(),
-    sort_order: parseInt(document.getElementById('f-order').value) || 0,
-    active_yn: document.getElementById('f-active').checked,
-  };
-  if (!body.name) { showToast('계정과목명을 입력하세요', 'warning'); return; }
-  const url = id ? `${API}/${encodeURIComponent(id)}` : API;
-  const method = id ? 'PUT' : 'POST';
-  const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  if (res.ok) { showToast('저장 완료', 'success'); setTimeout(() => location.reload(), 600); }
-  else { const e = await res.json(); showToast(e.detail || '오류', 'error'); }
-}
-async function deleteItem(id) {
-  if (!confirm('삭제하시겠습니까?')) return;
-  const res = await fetch(`${API}/${encodeURIComponent(id)}`, { method: 'DELETE' });
-  if (res.ok) { showToast('삭제 완료', 'success'); setTimeout(() => location.reload(), 600); }
-}
+  const API = '/api/lookups/accounts';
+
+  const modal = document.getElementById('item-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const editIdInput = document.getElementById('edit-id');
+  const nameInput = document.getElementById('f-name');
+  const activeInput = document.getElementById('f-active');
+  const submitItemBtn = document.getElementById('submit-item-btn');
+  const closeModalBtn = document.getElementById('close-modal-btn');
+
+  function openModal() {
+    modalTitle.textContent = '계정과목 등록';
+    editIdInput.value = '';
+    nameInput.value = '';
+    activeInput.checked = true;
+    modal.classList.remove('hidden');
+    nameInput.focus();
+  }
+
+  function editItem(row) {
+    modalTitle.textContent = '계정과목 수정';
+    editIdInput.value = row.id;
+    nameInput.value = row.name;
+    activeInput.checked = !!row.active_yn;
+    modal.classList.remove('hidden');
+    nameInput.focus();
+  }
+
+  function closeModal() {
+    modal.classList.add('hidden');
+  }
+
+  async function submitItem() {
+    const id = editIdInput.value;
+    const body = {
+      name: nameInput.value.trim(),
+      active_yn: activeInput.checked,
+    };
+    if (!body.name) {
+      showToast('계정과목명을 입력하세요', 'warning');
+      return;
+    }
+    const url = id ? `${API}/${encodeURIComponent(id)}` : API;
+    const method = id ? 'PUT' : 'POST';
+    submitItemBtn.disabled = true;
+    try {
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        showToast('저장 완료', 'success');
+        setTimeout(() => location.reload(), 600);
+        return;
+      }
+      const e = await res.json();
+      showToast(e.detail || '오류', 'error');
+    } finally {
+      submitItemBtn.disabled = false;
+    }
+  }
+
+  async function deleteItem(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    const res = await fetch(`${API}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast('삭제 완료', 'success');
+      setTimeout(() => location.reload(), 600);
+    }
+  }
+
+  document.getElementById('btn-lookup-add').addEventListener('click', openModal);
+  closeModalBtn.addEventListener('click', closeModal);
+  submitItemBtn.addEventListener('click', submitItem);
+
+  LookupReorder.init({
+    itemsScriptId: 'lookup-items-json',
+    tbodyId: 'lookup-tbody',
+    theadId: 'lookup-thead',
+    tableWrapId: 'lookup-table-wrap',
+    apiReorder: '/api/lookups/accounts/reorder',
+    idType: 'string',
+    nameColumnTitle: '계정과목/지출내역',
+    emptyLabel: '계정과목',
+    onEdit: editItem,
+    onDelete: deleteItem,
+  });
 </script>
 {% endblock %}

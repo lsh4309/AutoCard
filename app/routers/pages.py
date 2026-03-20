@@ -77,22 +77,58 @@ async def lookups_cards(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("card_users.html", {"request": request, "users": users})
 
 
+def _reorder_json_projects(projects: list) -> str:
+    items = [
+        {"id": p["name"], "name": p["name"], "active_yn": bool(p.get("active_yn", True))}
+        for p in projects
+    ]
+    return json.dumps(items, ensure_ascii=False)
+
+
+def _reorder_json_solutions(solutions: list) -> str:
+    items = [
+        {"id": int(s["id"]), "name": s["name"], "active_yn": bool(s.get("active_yn", True))}
+        for s in solutions
+    ]
+    return json.dumps(items, ensure_ascii=False)
+
+
+def _reorder_json_accounts(accounts: list) -> str:
+    items = [
+        {"id": a["name"], "name": a["name"], "active_yn": bool(a.get("active_yn", True))}
+        for a in accounts
+    ]
+    return json.dumps(items, ensure_ascii=False)
+
+
 @router.get("/lookups/projects", response_class=HTMLResponse)
 async def lookups_projects(request: Request, db: Session = Depends(get_db)):
     projects = get_all_projects(db)
-    return templates.TemplateResponse("projects.html", {"request": request, "projects": projects})
+    return templates.TemplateResponse("projects.html", {
+        "request": request,
+        "projects": projects,
+        "lookup_reorder_items_json": _reorder_json_projects(projects),
+    })
 
 
 @router.get("/lookups/solutions", response_class=HTMLResponse)
 async def lookups_solutions(request: Request, db: Session = Depends(get_db)):
     solutions = get_all_solutions(db)
-    return templates.TemplateResponse("solutions.html", {"request": request, "solutions": solutions})
+    return templates.TemplateResponse("solutions.html", {
+        "request": request,
+        "solutions": solutions,
+        "lookup_reorder_items_json": _reorder_json_solutions(solutions),
+    })
 
 
 @router.get("/lookups/accounts", response_class=HTMLResponse)
 async def lookups_accounts(request: Request, db: Session = Depends(get_db)):
     accounts = get_all_account_subjects(db)
-    return templates.TemplateResponse("expense_categories.html", {"request": request, "accounts": accounts})
+    return templates.TemplateResponse("expense_categories.html", {
+        "request": request,
+        "accounts": accounts,
+        "lookup_reorder_items_json": _reorder_json_accounts(accounts),
+    })
 
 
 @router.get("/exports", response_class=HTMLResponse)
